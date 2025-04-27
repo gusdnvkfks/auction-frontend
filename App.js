@@ -6,7 +6,7 @@
  */
 
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import LoginPage from './src/pages/LoginPage';
 
 function App() {
   /*
@@ -20,19 +20,8 @@ function App() {
    */
 
   return (
-    <View style={styles.container}>
-      <Text>중고 어플 - 프론트엔드!!!!!</Text>
-    </View>
+      <LoginPage />
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,               // 화면 전체 사용
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#fff'
-  }
-});
 
 export default App;
