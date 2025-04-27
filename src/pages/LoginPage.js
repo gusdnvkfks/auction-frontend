@@ -12,6 +12,7 @@ import { TextInputMask } from 'react-native-masked-text';
 import axios from 'axios';
 import Config from 'react-native-config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import AppText from '../components/AppText';
 
 const LoginPage = () => {
     // API URL
@@ -210,7 +211,7 @@ const LoginPage = () => {
             </TouchableOpacity>
 
 
-            <Text style={styles.title}>전화번호 인증을 해주세요.</Text>
+            <AppText style={styles.title}>전화번호 인증을 해주세요.</AppText>
 
             {/* 전화번호 입력, 인증번호 발송 버튼 */}
             <TextInputMask
@@ -238,7 +239,7 @@ const LoginPage = () => {
                             phoneNumber.length < 13 && styles.inActiveComfirmBtn
                         ]}>
                             <TouchableOpacity onPress={() => handleConfirm('phone')}>
-                                <Text style={styles.btnText}>확인</Text>
+                                <AppText style={styles.btnText}>확인</AppText>
                             </TouchableOpacity>
                         </View>
                     )}
@@ -267,14 +268,14 @@ const LoginPage = () => {
                                     certifyInputRef.current = input;
                                 }}
                             />
-                            <Text style={styles.timerText}>
+                            <AppText style={styles.timerText}>
                                 {minutes}:{formattedSeconds}
-                            </Text>
+                            </AppText>
                         </View>
                     </View>
                     
                     <TouchableOpacity style={styles.reCertify} onPress={() => handleConfirm('reCertify')}>
-                        <Text style={styles.reCertifyText}>인증번호 재발송</Text>
+                        <AppText style={styles.reCertifyText}>인증번호 재발송</AppText>
                     </TouchableOpacity>
                 </>
             )}
@@ -285,7 +286,7 @@ const LoginPage = () => {
                             certifyNumber.length < 6 && styles.inActiveComfirmBtn
                 ]}>
                     <TouchableOpacity onPress={() => handleConfirm('certify')}>
-                        <Text>완료</Text>
+                        <AppText>완료</AppText>
                     </TouchableOpacity>
                 </View>
             )}
@@ -313,7 +314,11 @@ const styles = StyleSheet.create({
         paddingLeft: '5%',
         marginBottom: '10%',
         color: '#333',
-        fontWeight: 'bold'
+        textShadowColor: '#6495ED',
+        textShadowOffset: { width: 0.7, height: 0 },
+        textShadowRadius: 0,
+        // 2) 글자를 조금 확대(scale)해서 두께 강조
+        transform: [{ scaleX: 1.0 }, { scaleY: 1.0 }],
     },
     input: {
         alignSelf: 'center',
@@ -324,6 +329,7 @@ const styles = StyleSheet.create({
         borderColor: '#ddd',
         borderRadius: 8,
         marginBottom: 12,
+        fontFamily: 'Hakgyoansim'
     },
     inputDisabled: {
         color: 'gray',
@@ -368,6 +374,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: '#ddd',
         borderRadius: 8,
+        fontFamily: 'Hakgyoansim'
     },
     timerText: {
         position: 'absolute',
