@@ -6,7 +6,7 @@
  */
 
 import React from 'react';
-import LoginPage from './src/pages/LoginPage';
+import LandingPage from './src/pages/LandingPage';
 
 function App() {
   /*
@@ -20,7 +20,7 @@ function App() {
    */
 
   return (
-      <LoginPage />
+      <LandingPage />
   );
 }
 

@@ -75,18 +75,28 @@ const LoginPage = () => {
         // 전화 번호 입력 후에 확인 버튼이랑, 인증번호 입력 후에 확인 버튼이랑 처리가 다름
         if(inputType === 'phone') {
             // 인풋타입이 폰이면
-            await requestPhoneCertify();
-            
-        }else if(inputType === 'certify') {
-            // 인풋타입이 certify 이면 인증번호 맞는지 API 확인 후
-            // 로그인 처리하기.
-            // 시간 확인해서 시간이 0이면 인증번호 재발송 하라고 하기
-            if(timer <= 0) {
-                Alert.alert("인증 시간이 초과되었습니다. 다시 요청해주세요.");
-                // 다시 요청할 때 state값 뭐 바꿔야되는지 확인하기
+            if(phoneNumber.length == 13) {
+                await requestPhoneCertify();
+            }else {
+                Alert.alert("전화번호를 다시 확인해주세요.");
                 return;
             }
-            await verifyPhoneCertify();
+            
+        }else if(inputType === 'certify') {
+            if(certifyNumber.length == 6) {
+                // 인풋타입이 certify 이면 인증번호 맞는지 API 확인 후
+                // 로그인 처리하기.
+                // 시간 확인해서 시간이 0이면 인증번호 재발송 하라고 하기
+                if(timer <= 0) {
+                    Alert.alert("인증 시간이 초과되었습니다. 다시 요청해주세요.");
+                    // 다시 요청할 때 state값 뭐 바꿔야되는지 확인하기
+                    return;
+                }
+                await verifyPhoneCertify();
+            }else {
+                Alert.alert("인증번호를 다시 확인해주세요.");
+                return;
+            }
 
         }else {
             // 재 요청인 경우
@@ -102,55 +112,86 @@ const LoginPage = () => {
 
     // 인증번호 발송 함수
     const requestPhoneCertify = async () => {
-        const res = await axios.post(`${apiUrl}/api/phone-certify/send`, 
-            {
-                "phone": phoneNumber,
-                "type": "login"
-            },
-            {
-                headers: {
-                    'Content-Type': 'application/json'
+        try {
+            const res = await axios.post(`${apiUrl}/api/phone-certify/send`, 
+                {
+                    "phone": phoneNumber,
+                    "type": "login"
+                },
+                {
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
                 }
+            );
+    
+            if(res.data.result === "success") {
+                setIsPhoneComplete(true);
+                setIsPhoneEditable(false);
+                setActiveInput('certify');
+    
+                requestAnimationFrame(() => {
+                    certifyInputRef.current && certifyInputRef.current.focus();
+                });
+            }else {
+                Alert.alert('오류', res.data.message || '인증번호 발송 실패');
             }
-        );
-
-        if(res.data.result === "success") {
-            setIsPhoneComplete(true);
-            setIsPhoneEditable(false);
-            setActiveInput('certify');
-
-            requestAnimationFrame(() => {
-                certifyInputRef.current && certifyInputRef.current.focus();
-            });
-        }else {
-            Alert.alert('오류', res.data.message || '인증번호 발송 실패');
+        } catch (error) {
+            Alert.alert('잠시 후 다시 시도해주세요.');
         }
     }
 
     // 인증번호 검증 함수
     const verifyPhoneCertify = async () => {
-        const res = await axios.post(`${apiUrl}/api/phone-certify/verify`, 
-            {
-                "phone": phoneNumber,
-                "code": certifyNumber
-            },
-            {
-                headers: {
-                    'Content-Type': 'application/json'
+        try {
+            const res = await axios.post(`${apiUrl}/api/phone-certify/verify`, 
+                {
+                    "phone": phoneNumber,
+                    "code": certifyNumber
+                },
+                {
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
                 }
+            );
+            
+            if(res.data.result === "success") {
+    
+                // 로그인 api 호출해주기.
+                await loginApiCall();
+            }else {
+                Alert.alert("오류", res.data.message || '인증 실패');
             }
-        );
+        } catch (error) {
+            Alert.alert('잠시 후 다시 시도해주세요.');
+        }
+    }
 
-        if(res.data.result === "success") {
+    // 로그인 호출하기기
+    const loginApiCall = async () => {
+        try {
+            const res = await axios.post(`${apiUrl}/api/login`, 
+                {
+                    "phone": phoneNumber,
+                },
+                {
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                }
+            );
+    
             // accessToken과 refreshToken asyncStorage에 보관해주기
-            await AsyncStorage.setItem('accessToken', accessToken);
-            await AsyncStorage.setItem('refreshToken', refreshToken);
-
+            await AsyncStorage.setItem('accessToken', res.data.accessToken);
+            await AsyncStorage.setItem('refreshToken', res.data.refreshToken);
+    
             Alert.alert("로그인이 완료되었습니다.");
             // TODO : 로그인 이후 처리 하기
-        }else {
-            Alert.alert("오류", res.data.message || '인증 실패');
+        } catch (error) {
+            Alert.alert('잠시 후 다시 시도해주세요.');
         }
+        
     }
 
     // 전화 번호 입력 후 확인 누르면 인증번호 입력창으로 포커스
@@ -191,7 +232,11 @@ const LoginPage = () => {
             {!isPhoneComplete && (
                 <>
                     {(isKeyboardVisible() && activeInput === 'phone') && (
-                        <View style={[styles.confirmWrapper, { bottom: keyboardHeight }]}>
+                        <View style={[
+                            styles.confirmWrapper,
+                            { bottom: keyboardHeight },
+                            phoneNumber.length < 13 && styles.inActiveComfirmBtn
+                        ]}>
                             <TouchableOpacity onPress={() => handleConfirm('phone')}>
                                 <Text style={styles.btnText}>확인</Text>
                             </TouchableOpacity>
@@ -237,7 +282,7 @@ const LoginPage = () => {
             {(isKeyboardVisible() && activeInput === 'certify') && (
                 <View style={[styles.confirmWrapper,
                             { bottom: keyboardHeight },
-                            certifyNumber.length < 6 && styles.activeComfirmBtn
+                            certifyNumber.length < 6 && styles.inActiveComfirmBtn
                 ]}>
                     <TouchableOpacity onPress={() => handleConfirm('certify')}>
                         <Text>완료</Text>
@@ -291,7 +336,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         height: 50
     },
-    activeComfirmBtn: {
+    inActiveComfirmBtn: {
         backgroundColor: 'gray',
     },
     btnText: {
