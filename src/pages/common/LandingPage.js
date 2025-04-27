@@ -7,7 +7,7 @@ import {
   Image,
   Dimensions
 } from 'react-native';
-import AppText from '../components/AppText';
+import AppText from '../../components/AppText';
 
 const { width } = Dimensions.get('window');
 
@@ -17,7 +17,7 @@ const LandingScreen = ({ navigation }) => {
       {/* 중앙 그룹: 로고 + 텍스트 */}
       <View style={styles.centerGroup}>
         <Image
-          source={require('../assets/images/logo.png')}
+          source={require('../../assets/images/logo.png')}
           style={styles.logo}
           resizeMode="contain"
         />

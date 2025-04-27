@@ -36,7 +36,7 @@ const SplashScreen = ({ navigation }) => {
     return (
         <View style={styles.container}>
             <Image 
-                source={require('../assets/images/logo.png')}
+                source={require('../../assets/images/logo.png')}
                 style={styles.logo}
                 resizeMode='contain'
             />
@@ -55,7 +55,7 @@ const styles = StyleSheet.create({
     },
     logo: {
         width: width * 0.5,
-        height: width * 0.5,
+        height: height * 0.5,
     },
     indicator: {
         marginTop: 24,

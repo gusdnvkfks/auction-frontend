@@ -12,7 +12,7 @@ import { TextInputMask } from 'react-native-masked-text';
 import axios from 'axios';
 import Config from 'react-native-config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import AppText from '../components/AppText';
+import AppText from '../../components/AppText';
 
 const LoginPage = () => {
     // API URL
