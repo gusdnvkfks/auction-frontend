@@ -1,6 +1,6 @@
-// src/screens/SplashScreen.js
+// src/pages/SplashPage.js
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     View,
     Image,
@@ -8,13 +8,26 @@ import {
     Dimensions,
     ActivityIndicator
 } from 'react-native';
+import AppText from '../../components/AppText';
 
-const SplashScreen = ({ navigation }) => {
+const SplashPage = ({ navigation, route }) => {
+    const { nextPage, text } = route.params;
+
     useEffect(() => {
-        const timeout = setTimeout(checkAuth, 1000);
+        const timeout = setTimeout(pageSetting, 2000);
         return () => clearTimeout(timeout);
     }, []);
 
+    const pageSetting = () => {
+        if(nextPage === "Landing") {
+            checkAuth();
+        }else if(nextPage === "SignUp") {
+            const { storeId, channelKey } = route.params;
+            startVerify(storeId, channelKey);
+        }
+    }
+
+    // 처음 앱 실행 시
     const checkAuth = async () => {
         try {
             const token = await AsyncStorage.getItem('accessToken');
@@ -25,12 +38,17 @@ const SplashScreen = ({ navigation }) => {
             }else {
                 // 안되어있으면 Landing화면으로
                 navigation.replace('Landing');
-              }
+            }
         } catch (error) {
             // 에러나도 랜딩페이지
             console.log("error");
             navigation.replace('Landing');
         }
+    }
+
+    // 회원가입 중
+    const startVerify = (storeId, channelKey) => {
+        navigation.replace('Verify', { storeId, channelKey });
     }
   
     return (
@@ -40,6 +58,7 @@ const SplashScreen = ({ navigation }) => {
                 style={styles.logo}
                 resizeMode='contain'
             />
+            <AppText>{text}</AppText>
             <ActivityIndicator size="small" color="#6495ED" style={styles.indicator} />
         </View>
     );
@@ -62,4 +81,4 @@ const styles = StyleSheet.create({
     },
 });
 
-export default SplashScreen;
+export default SplashPage;

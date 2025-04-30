@@ -11,7 +11,7 @@ import AppText from '../../components/AppText';
 
 const { width } = Dimensions.get('window');
 
-const LandingScreen = ({ navigation }) => {
+const LandingPage = ({ navigation }) => {
   return (
     <View style={styles.container}>
       {/* 중앙 그룹: 로고 + 텍스트 */}
@@ -34,7 +34,7 @@ const LandingScreen = ({ navigation }) => {
         <TouchableOpacity
           style={styles.startButton}
           activeOpacity={0.8}
-          onPress={() => navigation.navigate('SignUp')}
+          onPress={() => navigation.navigate('Location')}
         >
           <AppText style={styles.startButtonText}>시작하기</AppText>
         </TouchableOpacity>
@@ -50,7 +50,7 @@ const LandingScreen = ({ navigation }) => {
   );
 };
 
-export default LandingScreen;
+export default LandingPage;
 
 const styles = StyleSheet.create({
   container: {

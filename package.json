@@ -10,23 +10,28 @@
     "test": "jest"
   },
   "dependencies": {
+    "@actbase/react-daum-postcode": "^1.0.4",
     "@react-native-async-storage/async-storage": "^2.1.2",
     "@react-navigation/native": "^7.1.6",
     "@react-navigation/stack": "^7.2.10",
     "@reduxjs/toolkit": "^2.7.0",
     "axios": "^1.9.0",
     "formik": "^2.4.6",
+    "iamport-react-native": "^2.0.13",
     "react": "19.0.0",
     "react-native": "0.79.1",
     "react-native-config": "^1.5.5",
     "react-native-gesture-handler": "^2.25.0",
+    "react-native-get-random-values": "^1.11.0",
     "react-native-global-props": "^1.1.5",
     "react-native-masked-text": "^1.13.0",
     "react-native-paper": "^5.13.5",
     "react-native-safe-area-context": "^5.4.0",
     "react-native-screens": "^4.10.0",
     "react-native-vector-icons": "^10.2.0",
+    "react-native-webview": "^13.13.5",
     "react-redux": "^9.2.0",
+    "uuid": "^11.1.0",
     "yup": "^1.6.1"
   },
   "devDependencies": {
