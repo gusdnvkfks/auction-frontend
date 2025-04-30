@@ -40,7 +40,10 @@ const VerifyPage = ({ navigation }) => {
                                 name: res.data.response.name,
                                 phone: res.data.response.phone,
                             });
-                            navigation.navigate("SignUp");
+                            navigation.navigate("SignUpFlow", {
+                                screen: "SignUp",
+                                params: {},
+                            });
                         }else {
                             // 이상함
                         }

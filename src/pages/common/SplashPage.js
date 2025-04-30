@@ -48,7 +48,7 @@ const SplashPage = ({ navigation, route }) => {
 
     // 회원가입 중
     const startVerify = (storeId, channelKey) => {
-        navigation.replace('Verify', { storeId, channelKey });
+        navigation.replace('SignUpFlow', {screen: 'Verify', params: { storeId, channelKey }});
     }
   
     return (
