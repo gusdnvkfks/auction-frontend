@@ -1,17 +1,31 @@
+import React, { useEffect } from 'react';
 import axios from 'axios';
 import IMP from 'iamport-react-native';
-import React, { useContext } from 'react';
-import { AuthContext } from '../../contexts/AuthContext';
+
+import Config from 'react-native-config';
+import { useSelector, useDispatch } from 'react-redux';
+import { setUserInfo } from '../../features/signupSlice';
 
 const VerifyPage = ({ navigation }) => {
-    const { setCertificationInfo } = useContext(AuthContext);
+    const dispatch = useDispatch();
+    // Redux 상태 가져오기
+    const userInfo = useSelector(state => state.signup.userInfo);
+
+    useEffect(() => {
+        if (userInfo.name && userInfo.phone) {
+          navigation.replace('Splash', {
+            nextPage: "Main",
+            text: '회원가입 진행중 입니다.',
+          });
+        }
+    }, [userInfo, navigation]);
 
     const getAccessToken = async () => {
         const { data } = await axios.post(
             'https://api.iamport.kr/users/getToken',
             {
-                imp_key: '3015423132473177',       // 포트원 관리자콘솔에서 발급받은 API Key
-                imp_secret: 'NbPI4ZNkeKZ3nWtP6QuZGm6Sn5aCpjTek1vMuPUIdR8J9hhbg7JpUPO5zqsOLnicmCu15QY9fQu80lpA'  // 포트원 관리자콘솔에서 발급받은 API Secret
+                imp_key: Config.IMP_API_KEY,       // 포트원 관리자콘솔에서 발급받은 API Key
+                imp_secret: Config.IMP_API_SECRET_KEY  // 포트원 관리자콘솔에서 발급받은 API Secret
             },
             {
                 headers: { 'Content-Type': 'application/json' }
@@ -25,35 +39,23 @@ const VerifyPage = ({ navigation }) => {
         if(response.success === "true") {
             const impToken = await getAccessToken();
             console.log(impToken);
-            await axios
-                .get("https://api.iamport.kr/certifications/" + response.imp_uid, {
+            const res = await axios.get(
+                "https://api.iamport.kr/certifications/" + response.imp_uid, 
+                {
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': impToken
                     }
-                })
-                .then(res => {
-                    console.log(res);
-                    if(res.data) {
-                        if(res.data.response) {
-                            setCertificationInfo({
-                                name: res.data.response.name,
-                                phone: res.data.response.phone,
-                            });
-                            navigation.navigate("SignUpFlow", {
-                                screen: "SignUp",
-                                params: {},
-                            });
-                        }else {
-                            // 이상함
-                        }
-                    }else {
-                        // 이상함함
-                    }
-                })
-                .catch(error => {
-                    console.log(error);
-                })
+                }
+            );
+
+            const info = res.data?.response;
+            if(info?.certified) {
+                dispatch(setUserInfo({
+                    name: info.name,
+                    phone: info.phone,
+                }));
+            }
         }else {
             // 실패
             navigation.goBack();
@@ -70,7 +72,7 @@ const VerifyPage = ({ navigation }) => {
 
     return (
         <IMP.Certification
-            userCode="imp68575328"
+            userCode={Config.IMP_CHAIN_IDENTICODE}
             data={data}
             callback={certificationCallback}
         />

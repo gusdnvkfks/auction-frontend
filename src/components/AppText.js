@@ -8,6 +8,8 @@ export default function AppText(props) {
     <Text
       {...props}
       style={[{ fontFamily: 'Hakgyoansim' }, props.style]}
-    />
+    >
+      {props.children}
+    </Text>
   );
 }

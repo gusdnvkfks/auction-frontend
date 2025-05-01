@@ -1,4 +1,4 @@
-import React, { useContext, useState } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   TouchableOpacity,
@@ -7,33 +7,35 @@ import {
 } from 'react-native';
 import AppText from '../../components/AppText';
 import Postcode from '@actbase/react-daum-postcode';
-import { SignUpContext } from '../../contexts/SignUpContext';
+import { useSelector, useDispatch } from 'react-redux';
+import { setAddress } from '../../features/signupSlice';
 
 const LocationPage = ({ navigation }) => {
-    const [isModal, setModal] = useState(false);
-    const { setAddress } = useContext(SignUpContext);
+    const dispatch = useDispatch();
+    
+    // Redux 상태 가져오기
+    const address = useSelector(state => state.signup.address);
 
-    const [addressText, setAddressText] = useState('주소를 설정해\n주세요.');
+    const [isModal, setModal] = useState(false);
 
     const kakaoApiCall = () => {
         setModal(true);
     }
 
     const addressSetting = (data) => {
-        const addr = {
-            "city": data.sido,
-            "gu": data.sigungu,
-            "dong": data.bname
-        };
-        setAddress(addr);
-        setAddressText(data.sido + ' ' + data.sigungu + '\n' + data.bname);
-
-        navigation.replace('Splash', {
-            nextPage: "SignUp",
-            text: '회원가입을 위해\n본인인증을 시작합니다.',
-            storeId: 'store-607080c4-993a-4376-9a62-37a2fdde1a22',
-            channelKey: 'channel-key-f83a443f-de9b-4516-83ec-e4ef7cb4b953'
-        });
+        dispatch(setAddress({
+            city: data.sido,
+            gu: data.sigungu,
+            dong: data.bname,
+        }));
+        
+        navigation.replace('TermsOfUse');
+        // navigation.replace('Splash', {
+        //     nextPage: "SignUp",
+        //     text: '회원가입을 위해\n본인인증을 시작합니다.',
+        //     storeId: 'store-607080c4-993a-4376-9a62-37a2fdde1a22',
+        //     channelKey: 'channel-key-f83a443f-de9b-4516-83ec-e4ef7cb4b953'
+        // });
     }
 
     return (
@@ -61,16 +63,23 @@ const LocationPage = ({ navigation }) => {
 
             {/* 지도 영역 또는 설정 안내 */}
             <View style={styles.mapContainer}>
-                <AppText style={styles.placeholderText}>{addressText}</AppText>
+                {address.city ? (
+                    <AppText style={styles.placeholderText}>{address.city} {address.gu}{'\n'}{address.dong}</AppText>
+                ) : (
+                    <AppText style={styles.placeholderText}>
+                        주소를 설정해{'\n'}주세요.
+                    </AppText>
+                )}
             </View>
 
             {/* ← 추가: 오른쪽 하단 “건너뛰기” 버튼 */}
             <TouchableOpacity
                 style={styles.skipButton}
-                onPress={() => navigation.navigate('Splash', {
-                    nextPage: "SignUp",
-                    text: '회원가입을 위해\n본인인증을 시작합니다.'
-                })}
+                onPress={() => navigation.navigate('TermsOfUse')}
+                // onPress={() => navigation.navigate('Splash', {
+                //     nextPage: "SignUp",
+                //     text: '회원가입을 위해\n본인인증을 시작합니다.'
+                // })}
             >
                 <AppText style={styles.skipText}>건너뛰기</AppText>
             </TouchableOpacity>

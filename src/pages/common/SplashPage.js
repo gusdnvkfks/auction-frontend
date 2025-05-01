@@ -1,16 +1,23 @@
 // src/pages/SplashPage.js
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import {
     View,
     Image,
     StyleSheet,
     Dimensions,
-    ActivityIndicator
+    ActivityIndicator,
+    Alert
 } from 'react-native';
 import AppText from '../../components/AppText';
+import { useSelector } from 'react-redux';
+import axios from 'axios';
+import Config from 'react-native-config';
 
 const SplashPage = ({ navigation, route }) => {
+    const { userInfo, address, consent } = useSelector(state => state.signup);
+
+    const apiUrl = Config.API_URL;
     const { nextPage, text } = route.params;
 
     useEffect(() => {
@@ -24,6 +31,9 @@ const SplashPage = ({ navigation, route }) => {
         }else if(nextPage === "SignUp") {
             const { storeId, channelKey } = route.params;
             startVerify(storeId, channelKey);
+        }else if(nextPage === "Main") {
+            console.log('메인페이지');
+            signUpCall();
         }
     }
 
@@ -46,10 +56,74 @@ const SplashPage = ({ navigation, route }) => {
         }
     }
 
-    // 회원가입 중
+    // 회원가입 중 본인인증 페이지로 이동
     const startVerify = (storeId, channelKey) => {
-        navigation.replace('SignUpFlow', {screen: 'Verify', params: { storeId, channelKey }});
+        navigation.replace('Verify', { storeId, channelKey });
     }
+
+    // 회원가입 요청
+    const signUpCall = async () => {
+        try {
+            const res = await axios.post(`${apiUrl}/api/register`, 
+                {
+                    "name": userInfo.name,
+                    "phone": userInfo.phone,
+                    "city": address.city,
+                    "gu": address.gu,
+                    "dong": address.dong,
+                    "privacy": consent.privacy,
+                    "terms": consent.terms,
+                    "verification": consent.verification,
+                    "location": consent.location,
+                    "age14": consent.age14,
+                    "marketing": consent.marketing,
+                },
+                {
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                }
+            );
+
+            console.log(res);
+
+            if(res.data.result === "success") {
+                // 로그인 요청 후 메인페이지로 이동
+                try {
+                    const loginRes = await axios.post(`${apiUrl}/api/login`,
+                        {
+                            "phone": userInfo.phone
+                        },
+                        {
+                            headers: {
+                                'Content-Type': 'application/json'
+                            }
+                        }
+                    );
+
+                    console.log(loginRes);
+                    
+                    if(loginRes.data.result === "success") {
+                        // 메인페이지 이동
+                        Alert.alert("로그인까지 성공");
+                    }else {
+                        // 로그인 실패 -> 로그인 페이지로 이동
+                        navigation.navigate("Login");
+                    }
+                } catch (loginError) {
+                    // 로그인 실패 에러 -> 로그인 페이지로 이동
+                    navigation.navigate("Login");
+                }
+            }else {
+                console.log(res);
+                Alert.alert(res.data.message);
+                return;
+            }
+        } catch (error) {
+            console.log(error);
+        }
+    }
+
   
     return (
         <View style={styles.container}>
