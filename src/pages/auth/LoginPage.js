@@ -14,7 +14,7 @@ import Config from 'react-native-config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import AppText from '../../components/AppText';
 
-const LoginPage = () => {
+const LoginPage = ({ navigation }) => {
     // API URL
     const apiUrl = Config.API_URL;
     const [phoneNumber, setPhoneNumber] = useState('');
@@ -169,7 +169,7 @@ const LoginPage = () => {
         }
     }
 
-    // 로그인 호출하기기
+    // 로그인 호출하기
     const loginApiCall = async () => {
         try {
             const res = await axios.post(`${apiUrl}/api/login`, 
@@ -187,8 +187,9 @@ const LoginPage = () => {
             await AsyncStorage.setItem('accessToken', res.data.accessToken);
             await AsyncStorage.setItem('refreshToken', res.data.refreshToken);
     
-            Alert.alert("로그인이 완료되었습니다.");
+            // Alert.alert("로그인이 완료되었습니다.");
             // TODO : 로그인 이후 처리 하기
+            navigation.navigate("Main");
         } catch (error) {
             Alert.alert('잠시 후 다시 시도해주세요.');
         }

@@ -45,6 +45,7 @@ const SplashPage = ({ navigation, route }) => {
 
             if(token) {
                 // 로그인이 되어있으면 메인화면으로 -> 아직 메인화면 안나옴
+                navigation.replace("Main");
             }else {
                 // 안되어있으면 Landing화면으로
                 navigation.replace('Landing');
