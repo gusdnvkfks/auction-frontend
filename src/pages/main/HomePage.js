@@ -1,13 +1,13 @@
 // src/pages/main/HomePage.js
 
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, View, TextInput } from 'react-native';
+import { ScrollView, StyleSheet, View, TextInput, Alert } from 'react-native';
 import AuctionItem from '../../components/AuctionItem';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import FloatingButton from '../../components/FloatingButton';
 import { useNavigation } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const HEADER_HEIGHT = 48;  // 원하는 고정 높이
 const dummyData = [
     {
         id: 1,
@@ -96,6 +96,16 @@ const HomePage = () => {
     const [searchKeyword, setSearchKeyword] = useState('');
     const navigation = useNavigation();
 
+    const goItemUpload = () => {
+        const token = AsyncStorage.getItem("accessToken");
+        if(token) {
+            navigation.navigate('ItemUpload')
+        }else {
+            Alert.alert("로그인이 필요합니다.");
+            navigation.navigate('Login');
+        }
+    }
+
     return (
         <View style={{ flex: 1 }}>
             <View style={styles.searchBox}>
@@ -124,10 +134,12 @@ const HomePage = () => {
             </ScrollView>
 
             {/* 고정 등록 버튼 */}
-            <FloatingButton onPress={() => navigation.navigate('ItemUpload')}></FloatingButton>
+            <FloatingButton onPress={goItemUpload}></FloatingButton>
         </View>
     );
 };
+
+const HEADER_HEIGHT = 48;  // 원하는 고정 높이
 
 const styles = StyleSheet.create({
     scrollContent: {
