@@ -30,6 +30,9 @@ const HOME_INDICATOR_HEIGHT = Platform.OS === 'ios' ? 34 : 0;
 const HEADER_HEIGHT = 48;
 const FOOTER_HEIGHT = 56;
 
+const START_OPTIONS = ['등록즉시', '1일뒤', '직접입력'];
+const END_OPTIONS = ['수동마감', '3일뒤', '1주일뒤', '직접입력'];
+
 const ItemUploadPage = ({ navigation }) => {
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
@@ -45,7 +48,7 @@ const ItemUploadPage = ({ navigation }) => {
     const [endDate, setEndDate] = useState(() => new Date('9999-12-31T23:59:59'));
     const [showEndPicker, setShowEndPicker] = useState(false);
 
-    const [activePicker, setActivePicker] = useState(null); // 'start' | 'end' | null
+    const [pickerType, setPickerType] = useState("");
 
     const pickImage = () => {
         ImagePicker.launchImageLibrary({ mediaType: 'photo' }, response => {
@@ -77,9 +80,11 @@ const ItemUploadPage = ({ navigation }) => {
       
         if(opt === '직접입력') {
             // 모달창 띄워주기
+            setPickerType("경매 시작시간");
             setShowStartPicker(true);
         }else {
             setShowStartPicker(false);
+            setPickerType("");
             // 등록즉시 / 24시간후 로직 예시
             setStartDate(
                 opt === '등록즉시' ? new Date() : new Date(Date.now() + 24 * 60 * 60 * 1000)
@@ -93,8 +98,10 @@ const ItemUploadPage = ({ navigation }) => {
         if(opt === '직접입력') {
             // 모달창 띄워주기기
             setShowEndPicker(true);
+            setPickerType("경매 마감시간");
         }else {
             setShowEndPicker(false);
+            setPickerType("");
             if(opt === '3일후') {
                 setEndDate(new Date(Date.now() + 3 * 24 * 60 * 60 * 1000));
             }else if (opt === '1주일후') {
@@ -138,7 +145,7 @@ const ItemUploadPage = ({ navigation }) => {
                 {/* 경매 시작 시간 */}
                 <AppText style={styles.label}>경매 시작 시간</AppText>
                 <View style={styles.optionRow}>
-                    {['등록즉시', '24시간후', '직접입력'].map(opt => (
+                    {START_OPTIONS.map(opt => (
                         <TouchableOpacity
                             key={opt}
                             onPress={() => onPressStartOption(opt)}
@@ -154,7 +161,7 @@ const ItemUploadPage = ({ navigation }) => {
                 {/* 경매 마감 시간 */}
                 <AppText style={styles.label}>경매 마감 시간</AppText>
                     <View style={styles.optionRow}>
-                    {['3일후', '1주일후', '수동마감', '직접입력'].map(opt => (
+                    {END_OPTIONS.map(opt => (
                         <TouchableOpacity
                         key={opt}
                         onPress={() => onPressEndOption(opt)}
@@ -168,6 +175,7 @@ const ItemUploadPage = ({ navigation }) => {
                 </View>
 
                 <DateTimeModal
+                    title={pickerType}
                     visible={showStartPicker || showEndPicker}
                     initialDate={startDate}
                     onCancel={() => {
@@ -181,9 +189,20 @@ const ItemUploadPage = ({ navigation }) => {
                     }}
                     onConfirm={date => {
                         if(showStartPicker) {
-                            setStartDate(date);
+                            const now = new Date();
+                            const valid = date < now ? now : date;
+                            setStartDate(valid);
                             setShowStartPicker(false);
                         }else if(showEndPicker) {
+                            // 마감시간은 최소 한시간 뒤로 설정
+                            const now = new Date();
+                            const minEnd = new Date(now.getTime() + 60 * 60 * 1000);
+                            if (date < minEnd) {
+                                Alert.alert('경고', '경매 마감시간은 현재시간보다 최소 1시간 이후로 설정됩니다.', [
+                                    { text: '확인', onPress: () => {} },
+                                ]);
+                                date = minEnd;
+                            }
                             setEndDate(date);
                             setShowEndPicker(false);
                         }

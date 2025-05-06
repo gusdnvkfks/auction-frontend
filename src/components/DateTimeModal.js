@@ -8,7 +8,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 const ITEM_HEIGHT = 40;
 const PICKER_HEIGHT = 200;
 
-const DateTimeModal = ({ visible, initialDate, onCancel, onConfirm }) => {
+const DateTimeModal = ({ title, visible, initialDate, onCancel, onConfirm }) => {
     const [step, setStep] = useState('date');
 
     const [tempYear, setTempYear]   = useState(initialDate.getFullYear());
@@ -73,7 +73,6 @@ const DateTimeModal = ({ visible, initialDate, onCancel, onConfirm }) => {
             const scrollView = ref.current;
             if(scrollView && typeof scrollView.scrollTo === 'function' && idx >= 0) {
                 setTimeout(() => {
-                    console.log(scrollView);
                     if(scrollView) {
                         scrollView.scrollTo({ y: idx * ITEM_HEIGHT, animated: false });
                     }
@@ -108,51 +107,54 @@ const DateTimeModal = ({ visible, initialDate, onCancel, onConfirm }) => {
         <Modal visible={visible} transparent animationType="slide" onRequestClose={onCancel}>
             <View style={styles.bg}>
                 <View style={styles.modal}>
-                <View style={styles.selectionBox} />
-                {step === 'date' ? (
-                    <>
-                        <View style={styles.labelRow}>
-                            <AppText style={styles.columnLabel}>년</AppText>
-                            <AppText style={styles.columnLabel}>월</AppText>
-                            <AppText style={styles.columnLabel}>일</AppText>
-                        </View>
-                        <View style={styles.wheelsRow}>
-                            <WheelPicker data={years} selected={tempYear} onSelect={setTempYear} />
-                            <WheelPicker data={months} selected={tempMonth} onSelect={setTempMonth} />
-                            <WheelPicker data={days} selected={tempDay} onSelect={setTempDay} />
-                        </View>
-                        <View style={styles.btnRow}>
-                            <TouchableOpacity onPress={onCancel}>
-                                <AppText style={styles.btn}>취소</AppText>
+                    <AppText style={styles.modalTitle}>
+                        {title}
+                    </AppText>
+                    <View style={styles.selectionBox} />
+                    {step === 'date' ? (
+                        <>
+                            <View style={styles.labelRow}>
+                                <AppText style={styles.columnLabel}>년</AppText>
+                                <AppText style={styles.columnLabel}>월</AppText>
+                                <AppText style={styles.columnLabel}>일</AppText>
+                            </View>
+                            <View style={styles.wheelsRow}>
+                                <WheelPicker data={years} selected={tempYear} onSelect={setTempYear} />
+                                <WheelPicker data={months} selected={tempMonth} onSelect={setTempMonth} />
+                                <WheelPicker data={days} selected={tempDay} onSelect={setTempDay} />
+                            </View>
+                            <View style={styles.btnRow}>
+                                <TouchableOpacity onPress={onCancel}>
+                                    <AppText style={styles.btn}>취소</AppText>
+                                </TouchableOpacity>
+                                <TouchableOpacity onPress={commitDate}>
+                                    <AppText style={styles.btn}>다음</AppText>
+                                </TouchableOpacity>
+                            </View>
+                        </>
+                    ) : (
+                        <>
+                            <TouchableOpacity onPress={() => setStep('date')} style={styles.backIcon}>
+                                <Ionicons name="arrow-back" size={20} color="#333" />
                             </TouchableOpacity>
-                            <TouchableOpacity onPress={commitDate}>
-                                <AppText style={styles.btn}>다음</AppText>
-                            </TouchableOpacity>
-                        </View>
-                    </>
-                ) : (
-                    <>
-                        <TouchableOpacity onPress={() => setStep('date')} style={styles.backIcon}>
-                            <Ionicons name="arrow-back" size={20} color="#333" />
-                        </TouchableOpacity>
-                        <View style={styles.labelRow}>
-                            <AppText style={styles.columnLabel}>시</AppText>
-                            <AppText style={styles.columnLabel}>분</AppText>
-                        </View>
-                        <View style={styles.wheelsRow}>
-                            <WheelPicker data={hours} selected={tempHour} onSelect={setTempHour} />
-                            <WheelPicker data={minutes} selected={tempMinute} onSelect={setTempMinute} />
-                        </View>
-                        <View style={styles.btnRow}>
-                            <TouchableOpacity onPress={onCancel}>
-                                <AppText style={styles.btn}>취소</AppText>
-                            </TouchableOpacity>
-                            <TouchableOpacity onPress={commitTime}>
-                                <AppText style={styles.btn}>완료</AppText>
-                            </TouchableOpacity>
-                        </View>
-                    </>
-                )}
+                            <View style={styles.labelRow}>
+                                <AppText style={styles.columnLabel}>시</AppText>
+                                <AppText style={styles.columnLabel}>분</AppText>
+                            </View>
+                            <View style={styles.wheelsRow}>
+                                <WheelPicker data={hours} selected={tempHour} onSelect={setTempHour} />
+                                <WheelPicker data={minutes} selected={tempMinute} onSelect={setTempMinute} />
+                            </View>
+                            <View style={styles.btnRow}>
+                                <TouchableOpacity onPress={onCancel}>
+                                    <AppText style={styles.btn}>취소</AppText>
+                                </TouchableOpacity>
+                                <TouchableOpacity onPress={commitTime}>
+                                    <AppText style={styles.btn}>완료</AppText>
+                                </TouchableOpacity>
+                            </View>
+                        </>
+                    )}
                 </View>
             </View>
         </Modal>
@@ -172,6 +174,12 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         paddingVertical: 16,
         paddingHorizontal: 12,
+    },
+    modalTitle: {
+        fontSize: 14,
+        fontWeight: '600',
+        textAlign: 'center',
+        marginBottom: 8
     },
     selectionBox: {
         position: 'absolute',
