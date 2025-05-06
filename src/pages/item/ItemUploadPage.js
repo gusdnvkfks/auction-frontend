@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
     View,
     TextInput,
@@ -11,6 +11,8 @@ import {
     StatusBar,
     Platform,
     Button,
+    Text,
+    Modal
 } from 'react-native';
 import axios from 'axios';
 import Config from 'react-native-config';
@@ -19,7 +21,7 @@ import AppText from '../../components/AppText';
 import AddButton from '../../components/AddButton';
 import RequiredLabel from '../../components/RequireLabel';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
+import DateTimeModal from '../../components/DateTimeModal';
 
 const STATUS_BAR_HEIGHT = Platform.OS === 'android'
     ? StatusBar.currentHeight
@@ -36,88 +38,24 @@ const ItemUploadPage = ({ navigation }) => {
     const [images, setImages] = useState([]);
 
     const [startOption, setStartOption] = useState('등록즉시');
-    const [endOption, setEndOption] = useState('낙찰시까지');
     const [startDate, setStartDate] = useState(new Date());
-    const [endDate, setEndDate] = useState(new Date(Date.now() + 3*24*60*60*1000));
-
     const [showStartPicker, setShowStartPicker] = useState(false);
+
+    const [endOption, setEndOption] = useState('수동마감');
+    const [endDate, setEndDate] = useState(() => new Date('9999-12-31T23:59:59'));
     const [showEndPicker, setShowEndPicker] = useState(false);
 
-    const [date, setDate] = useState(new Date());
-    const [show, setShow] = useState(false);
-
+    const [activePicker, setActivePicker] = useState(null); // 'start' | 'end' | null
 
     const pickImage = () => {
         ImagePicker.launchImageLibrary({ mediaType: 'photo' }, response => {
-            if (response.didCancel) return;
-            if (response.errorCode) {
+            if(response.didCancel) return;
+            if(response.errorCode) {
                 Alert.alert('이미지 선택 에러', response.errorMessage);
-            } else {
+            }else {
                 setImages(prev => [...prev, response.assets[0]]);
             }
         });
-    };
-
-    // Unified picker open
-    const openPicker = async (event, selectedDate) => {
-        console.log(target);
-        console.log(Platform.OS);
-        if (Platform.OS === 'android') {
-            console.log("android??");
-            const { type } = event;
-            console.log(type);
-        } else {
-            setPickerTarget(target);
-            setShowPicker(true);
-        }
-    };
-
-    const onIOSPickerChange = (event, date) => {
-        setShowPicker(false);
-        if (date) {
-            if (pickerTarget === 'start') {
-                setStartDate(date);
-                setStartOption('직접입력');
-            } else {
-                setEndDate(date);
-                setEndOption('직접입력');
-            }
-        }
-    };
-
-    // Native Date + Time pickers
-    const openAndroidPicker = (mode, target) => {
-        DateTimePickerAndroid.open({
-            value: target === 'start' ? startDate : endDate,
-            onChange: (_, date) => {
-                if (date) {
-                    if (target === 'start') {
-                        setStartDate(date);
-                        setStartOption('직접입력');
-                    } else {
-                        setEndDate(date);
-                        setEndOption('직접입력');
-                    }
-                }
-            },
-            mode: mode,
-            is24Hour: true
-        });
-    };
-
-    const onStartChange = (_, date) => {
-        setShowStartPicker(false);
-        if (date) {
-            setStartDate(date);
-            setStartOption('직접입력');
-        }
-    };
-    const onEndChange = (_, date) => {
-        setShowEndPicker(false);
-        if (date) {
-            setEndDate(date);
-            setEndOption('직접입력');
-        }
     };
 
     const isDirty = Boolean(
@@ -127,10 +65,51 @@ const ItemUploadPage = ({ navigation }) => {
     );
 
     const handleTempSave = () => {};
+
     const itemUpload = async () => {
         console.log(123);
         return;
     };
+
+    // 경매 시작시간 선택할 때
+    const onPressStartOption = (opt) => {
+        setStartOption(opt);
+      
+        if(opt === '직접입력') {
+            // 모달창 띄워주기
+            setShowStartPicker(true);
+        }else {
+            setShowStartPicker(false);
+            // 등록즉시 / 24시간후 로직 예시
+            setStartDate(
+                opt === '등록즉시' ? new Date() : new Date(Date.now() + 24 * 60 * 60 * 1000)
+            );
+        }
+    };
+
+    // 경매 마감시간 선택할 때
+    const onPressEndOption = (opt) => {
+        setEndOption(opt);
+        if(opt === '직접입력') {
+            // 모달창 띄워주기기
+            setShowEndPicker(true);
+        }else {
+            setShowEndPicker(false);
+            if(opt === '3일후') {
+                setEndDate(new Date(Date.now() + 3 * 24 * 60 * 60 * 1000));
+            }else if (opt === '1주일후') {
+                setEndDate(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
+            }else if (opt === '1개월후') {
+                const tmp = new Date();
+                tmp.setMonth(tmp.getMonth() + 1);
+                setEndDate(tmp);
+            }else {
+                // '수동마감'
+                setEndDate(new Date('9999-12-31T23:59:59'));
+            }
+        }
+    };
+
 
     return (
         <SafeAreaView style={styles.container}>
@@ -158,44 +137,58 @@ const ItemUploadPage = ({ navigation }) => {
 
                 {/* 경매 시작 시간 */}
                 <AppText style={styles.label}>경매 시작 시간</AppText>
-                <View>
-                    <Button title="날짜 선택" onPress={() => setShow(true)} />
-                    {show && (
-                        <DateTimePicker
-                            value={date}
-                            mode="date"
-                            display="default"
-                            onChange={openPicker}
-                        />
-                    )}
-                </View>
                 <View style={styles.optionRow}>
-                    {['등록즉시','24시간후','직접입력'].map(opt => (
+                    {['등록즉시', '24시간후', '직접입력'].map(opt => (
                         <TouchableOpacity
                             key={opt}
+                            onPress={() => onPressStartOption(opt)}
                             style={[styles.optionBtn, startOption === opt && styles.optionBtnActive]}
-                            onPress={() => opt === '직접입력' ? openPicker('start') : setStartOption(opt)}
                         >
-                            <AppText style={[styles.optionText, startOption === opt && styles.optionTextActive]}>{opt}</AppText>
+                        <Text style={ startOption === opt ? styles.optionTextActive : styles.optionText }>
+                            {opt}
+                        </Text>
                         </TouchableOpacity>
                     ))}
                 </View>
-                {startOption === '직접입력' && <AppText style={styles.chosenDate}>{startDate.toLocaleString()}</AppText>}
 
                 {/* 경매 마감 시간 */}
                 <AppText style={styles.label}>경매 마감 시간</AppText>
-                <View style={styles.optionRow}>
-                    {['3일후','1주일후','1개월후','낙찰시까지','직접입력'].map(opt => (
+                    <View style={styles.optionRow}>
+                    {['3일후', '1주일후', '수동마감', '직접입력'].map(opt => (
                         <TouchableOpacity
-                            key={opt}
-                            style={[styles.optionBtn, endOption === opt && styles.optionBtnActive]}
-                            onPress={() => opt === '직접입력' ? openPicker('end') : setEndOption(opt)}
+                        key={opt}
+                        onPress={() => onPressEndOption(opt)}
+                        style={[styles.optionBtn, endOption === opt && styles.optionBtnActive]}
                         >
-                            <AppText style={[styles.optionText, endOption === opt && styles.optionTextActive]}>{opt}</AppText>
+                        <Text style={ endOption === opt ? styles.optionTextActive : styles.optionText }>
+                            {opt}
+                        </Text>
                         </TouchableOpacity>
                     ))}
                 </View>
-                {endOption === '직접입력' && <AppText style={styles.chosenDate}>{endDate.toLocaleString()}</AppText>}
+
+                <DateTimeModal
+                    visible={showStartPicker || showEndPicker}
+                    initialDate={startDate}
+                    onCancel={() => {
+                        if(showStartPicker) {
+                            setStartOption('등록즉시');
+                            setShowStartPicker(false);
+                        }else if(showEndPicker) {
+                            setStartOption('수동마감');
+                            setShowEndPicker(false);
+                        }
+                    }}
+                    onConfirm={date => {
+                        if(showStartPicker) {
+                            setStartDate(date);
+                            setShowStartPicker(false);
+                        }else if(showEndPicker) {
+                            setEndDate(date);
+                            setShowEndPicker(false);
+                        }
+                    }}
+                />
 
                 {/* 제목 등 나머지 폼 */}
                 <AppText style={styles.label}>
@@ -251,9 +244,51 @@ const styles = StyleSheet.create({
     optionRow: { flexDirection: 'row', flexWrap: 'wrap', marginVertical: 8 },
     optionBtn: { paddingVertical: 6, paddingHorizontal: 12, borderWidth: 1, borderColor: '#ccc', borderRadius: 4, marginRight: 8, marginBottom: 8 },
     optionBtnActive: { backgroundColor: '#6495ED', borderColor: '#6495ED' },
-    optionText: { fontSize: 14, color: '#000' },
-    optionTextActive: { color: '#fff' },
+    optionText: { fontSize: 12, color: '#000' },
+    optionTextActive: { fontSize: 12, color: '#fff' },
     chosenDate: { fontSize: 14, color: '#333', marginBottom: 12 },
+
+    modalBg: {
+        flex: 1,
+        backgroundColor: '#00000088',
+        justifyContent: 'center',   // 세로 중앙
+        alignItems: 'center',       // 가로 중앙
+    },
+    modal: {
+        backgroundColor: '#fff',
+        width: '90%',
+        borderRadius: 8,
+        padding: 16,
+    },
+    wheelsRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+        height: 200,
+    },
+    wheel: {
+        width: '30%',
+    },
+    wheelItem: {
+        paddingVertical: 12,
+        alignItems: 'center',
+    },
+    wheelItemSelected: {
+        backgroundColor: '#eee',
+    },
+    wheelText: {
+        fontSize: 16,
+    },
+    wheelTextSelected: {
+        fontSize: 18,
+        fontWeight: 'bold',
+    },
+    modalBtns: {
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+        paddingVertical: 12,
+        borderTopWidth: 1,
+        borderColor: '#ddd',
+    },
 });
 
 export default ItemUploadPage;
