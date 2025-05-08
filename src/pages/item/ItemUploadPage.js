@@ -10,9 +10,7 @@ import {
     SafeAreaView,
     StatusBar,
     Platform,
-    Button,
     Text,
-    Modal
 } from 'react-native';
 import axios from 'axios';
 import Config from 'react-native-config';
@@ -43,10 +41,12 @@ const ItemUploadPage = ({ navigation }) => {
     const [startOption, setStartOption] = useState('등록즉시');
     const [startDate, setStartDate] = useState(new Date());
     const [showStartPicker, setShowStartPicker] = useState(false);
-
+    const [startDateString, setStartDateString] = useState("");
+    
     const [endOption, setEndOption] = useState('수동마감');
     const [endDate, setEndDate] = useState(() => new Date('9999-12-31T23:59:59'));
     const [showEndPicker, setShowEndPicker] = useState(false);
+    const [endDateString, setEndDateString] = useState("");
 
     const [pickerType, setPickerType] = useState("");
 
@@ -77,7 +77,7 @@ const ItemUploadPage = ({ navigation }) => {
     // 경매 시작시간 선택할 때
     const onPressStartOption = (opt) => {
         setStartOption(opt);
-      
+        setStartDateString("");
         if(opt === '직접입력') {
             // 모달창 띄워주기
             setPickerType("경매 시작시간");
@@ -95,6 +95,7 @@ const ItemUploadPage = ({ navigation }) => {
     // 경매 마감시간 선택할 때
     const onPressEndOption = (opt) => {
         setEndOption(opt);
+        setEndDateString("");
         if(opt === '직접입력') {
             // 모달창 띄워주기기
             setShowEndPicker(true);
@@ -115,6 +116,12 @@ const ItemUploadPage = ({ navigation }) => {
                 setEndDate(new Date('9999-12-31T23:59:59'));
             }
         }
+    };
+
+    const formatDate = (date) => {
+        const pad = (n) => String(n).padStart(2, '0');
+        return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ` +
+               `${pad(date.getHours())}:${pad(date.getMinutes())}`;
     };
 
 
@@ -157,6 +164,13 @@ const ItemUploadPage = ({ navigation }) => {
                         </TouchableOpacity>
                     ))}
                 </View>
+                
+                {/* 선택한 경매 시간 보여주기 */}
+                {startDateString !== "" && (
+                    <AppText>
+                        선택한 시작 시간 : {startDateString}
+                    </AppText>
+                )}
 
                 {/* 경매 마감 시간 */}
                 <AppText style={styles.label}>경매 마감 시간</AppText>
@@ -173,6 +187,13 @@ const ItemUploadPage = ({ navigation }) => {
                         </TouchableOpacity>
                     ))}
                 </View>
+
+                {/* 선택한 경매 시간 보여주기 */}
+                {endDateString !== "" && (
+                    <AppText>
+                        선택한 마감 시간 : {endDateString}
+                    </AppText>
+                )}
 
                 <DateTimeModal
                     title={pickerType}
@@ -193,18 +214,25 @@ const ItemUploadPage = ({ navigation }) => {
                             const valid = date < now ? now : date;
                             setStartDate(valid);
                             setShowStartPicker(false);
+
+                            var showStartDate = formatDate(valid);   // 보여줄 날짜
+                            setStartDateString(showStartDate);
+                            
                         }else if(showEndPicker) {
+                            // 마감시간은 시작시간보다 크고 최소 한시간 뒤로 가야됨
                             // 마감시간은 최소 한시간 뒤로 설정
-                            const now = new Date();
-                            const minEnd = new Date(now.getTime() + 60 * 60 * 1000);
+                            const minEnd = new Date(startDate.getTime() + 60 * 60 * 1000);
                             if (date < minEnd) {
-                                Alert.alert('경고', '경매 마감시간은 현재시간보다 최소 1시간 이후로 설정됩니다.', [
+                                Alert.alert('경고', '마감시간은 시작시간보다 최소 1시간 이후여야 합니다.', [
                                     { text: '확인', onPress: () => {} },
                                 ]);
                                 date = minEnd;
                             }
                             setEndDate(date);
                             setShowEndPicker(false);
+
+                            var showEndDate = formatDate(date);
+                            setEndDateString(showEndDate);
                         }
                     }}
                 />

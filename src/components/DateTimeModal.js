@@ -11,11 +11,11 @@ const PICKER_HEIGHT = 200;
 const DateTimeModal = ({ title, visible, initialDate, onCancel, onConfirm }) => {
     const [step, setStep] = useState('date');
 
-    const [tempYear, setTempYear]   = useState(initialDate.getFullYear());
+    const [tempYear, setTempYear] = useState(initialDate.getFullYear());
     const [tempMonth, setTempMonth] = useState(initialDate.getMonth()+1);
-    const [tempDay, setTempDay]     = useState(initialDate.getDate());
-    const [tempHour, setTempHour]   = useState(initialDate.getHours());
-    const [tempMinute, setTempMinute]=useState(initialDate.getMinutes());
+    const [tempDay, setTempDay] = useState(initialDate.getDate());
+    const [tempHour, setTempHour] = useState(initialDate.getHours());
+    const [tempMinute, setTempMinute] = useState(initialDate.getMinutes());
 
     // initialDate 가 바뀔 때마다 temp 초기화
     useEffect(() => {
