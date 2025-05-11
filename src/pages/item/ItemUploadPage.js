@@ -11,7 +11,7 @@ import {
     StatusBar,
     Platform,
     Text,
-    PermissionsAndroid
+    PermissionsAndroid,
 } from 'react-native';
 import axios from 'axios';
 import Config from 'react-native-config';
@@ -21,6 +21,8 @@ import AddButton from '../../components/AddButton';
 import RequiredLabel from '../../components/RequireLabel';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import DateTimeModal from '../../components/DateTimeModal';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import RNFS from 'react-native-fs';
 
 const STATUS_BAR_HEIGHT = Platform.OS === 'android'
     ? StatusBar.currentHeight
@@ -81,11 +83,12 @@ const ItemUploadPage = ({ navigation }) => {
 
         const options = {
             mediaType: 'photo',
+            includeBase64: true,
             quality: 0.8,
             selectionLimit: 0, // ✅ 0 = 무제한 선택 허용
         };
         
-        ImagePicker.launchImageLibrary(options, (response) => {
+        ImagePicker.launchImageLibrary(options, async (response) => {
             if(response.didCancel || response.errorCode || !response.assets?.length) {
                 console.log('이미지 선택 취소 또는 오류');
                 return;
@@ -97,6 +100,30 @@ const ItemUploadPage = ({ navigation }) => {
             if(totalCount > 10) {
                 Alert.alert('사진은 최대 10장까지만 추가할 수 있습니다.');
                 return;
+            }
+
+            // ✅ 크기 확인 필터링
+            const filtered = [];
+            for (const img of selected) {
+                try {
+                    const cleanUri = img.uri.replace('file://', '');
+                    const stat = await RNFS.stat(cleanUri);
+                    const sizeMB = stat.size / (1024 * 1024);
+
+                    if (sizeMB > MAX_IMAGE_SIZE_MB) {
+                        Alert.alert('이미지 용량 초과', `2MB를 초과한 이미지는 제외됩니다.\n(${img.fileName || '이름 없음'})`);
+                        continue;
+                    }
+
+                    filtered.push(img);
+                } catch (err) {
+                    console.log('크기 확인 실패:', err);
+                }
+            }
+
+            if (filtered.length === 0) {
+            Alert.alert('모든 이미지가 용량 초과로 제외되었습니다.');
+            return;
             }
         
             setImages(prev => [...prev, ...selected]);
@@ -131,32 +158,40 @@ const ItemUploadPage = ({ navigation }) => {
             return;
         }
 
-        const formData = new FormData();
-
-        formData.append('title', title);
-        formData.append('description', description);
-        formData.append('startTime', startDate.toISOString());
-        formData.append('endTime', endDate.toISOString());
-        formData.append('startPrice', Number(startPrice.replace(/,/g, '')));
-        formData.append('bidUnit', Number(bidIncrement.replace(/,/g, '')));
-        formData.append('buyNowPrice', Number(buyNowPrice.replace(/,/g, '')));
-        var isBidUnit = (bidIncrement === "" || bidIncrement === 0) ? 0 : 1;
-        formData.append('isBidUnit', isBidUnit);
-        formData.append('status', 1);
-
-        images.forEach((img, index) => {
-            formData.append('images', {
-                uri: img.uri,
-                type: img.type || 'image/jpeg',
-                name: img.fileName || `image_${index}.jpg`,
+        const payload = {
+            title,
+            description,
+            startTime: startDate.toISOString(),
+            endTime: endDate.toISOString(),
+            startPrice: Number(startPrice.replace(/,/g, '')),
+            bidUnit: Number(bidIncrement.replace(/,/g, '')),
+            buyNowPrice: Number(buyNowPrice.replace(/,/g, '')),
+            isBidUnit: bidIncrement === '' || bidIncrement === 0 ? 0 : 1,
+            status: 1,
+            images: images.map((img, i) => ({
+                name: img.fileName || `image_${i}.jpg`,
+                type: img.type,
+                base64: img.base64, // 👈 이거 중요
+            })),
+        };
+        
+        const accessToken = await AsyncStorage.getItem('accessToken');
+        try {
+            const res = await axios.post(`${apiUrl}/api/item/create`, formData, {
+                headers: {
+                    // formData를 사용할때는 Content-Type을 설정하지않고, axios가 자동으로 설정하게 둬야함
+                    // 그래서 주석처리
+                    // 'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${accessToken}`
+                }
             });
-        });
+            console.log(res);
+            
+        } catch (error) {
+            console.log('요청실패');
+            console.log(error);
+        }
 
-        await axios.post(`${apiUrl}/api/item/create`, formData, {
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        });
     };
 
     // 경매 시작시간 선택할 때

@@ -27,7 +27,6 @@ import ItemUploadPage from './src/pages/item/ItemUploadPage';
 // NAVIGATORS
 import MainTabNavigator from './src/navigators/MainTabNavigator';
 
-
 const Stack = createStackNavigator();
 
 export default function App() {
