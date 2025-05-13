@@ -34,6 +34,8 @@ const FOOTER_HEIGHT = 56;
 const START_OPTIONS = ['등록즉시', '1일뒤', '직접입력'];
 const END_OPTIONS = ['수동마감', '3일뒤', '1주일뒤', '직접입력'];
 
+const MAX_IMAGE_SIZE_MB = 2;
+
 const ItemUploadPage = ({ navigation }) => {
     const apiUrl = Config.API_URL;
 
@@ -110,6 +112,9 @@ const ItemUploadPage = ({ navigation }) => {
                     const stat = await RNFS.stat(cleanUri);
                     const sizeMB = stat.size / (1024 * 1024);
 
+                    console.log("sizeMB : ", sizeMB);
+                    console.log("MAX_IMAGE_SIZE_MB : ", MAX_IMAGE_SIZE_MB);
+
                     if (sizeMB > MAX_IMAGE_SIZE_MB) {
                         Alert.alert('이미지 용량 초과', `2MB를 초과한 이미지는 제외됩니다.\n(${img.fileName || '이름 없음'})`);
                         continue;
@@ -172,12 +177,13 @@ const ItemUploadPage = ({ navigation }) => {
                 name: img.fileName || `image_${i}.jpg`,
                 type: img.type,
                 base64: img.base64, // 👈 이거 중요
+                isThumbnail: i == 0 ? 1 : 0,
             })),
         };
         
         const accessToken = await AsyncStorage.getItem('accessToken');
         try {
-            const res = await axios.post(`${apiUrl}/api/item/create`, formData, {
+            const res = await axios.post(`${apiUrl}/api/item/create`, payload, {
                 headers: {
                     // formData를 사용할때는 Content-Type을 설정하지않고, axios가 자동으로 설정하게 둬야함
                     // 그래서 주석처리
@@ -186,6 +192,13 @@ const ItemUploadPage = ({ navigation }) => {
                 }
             });
             console.log(res);
+            if(res.data.result === "success") {
+                // 성공
+                Alert.alert("경매물품 등록이 완료되었습니다.");
+                navigation.replace("Main");
+            }else {
+                console.log(res);
+            }
             
         } catch (error) {
             console.log('요청실패');
