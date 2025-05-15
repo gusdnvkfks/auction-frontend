@@ -4,6 +4,10 @@ import { View, Text, Image, StyleSheet } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 
 const AuctionItem = ({ image, title, bidCount, likeCount, startPrice, stepPrice, currentPrice }) => {
+
+    const displayStartPrice = typeof startPrice === 'number' ? startPrice.toLocaleString() : '0';
+    const displayStepPrice = typeof stepPrice === 'number' ? stepPrice.toLocaleString() : '0';
+    const displayCurrentPrice = typeof currentPrice === 'number' ? currentPrice.toLocaleString() : '0';
     return (
         <View style={styles.container}>
             <Image source={image} style={styles.image} resizeMode="cover" />
@@ -12,16 +16,16 @@ const AuctionItem = ({ image, title, bidCount, likeCount, startPrice, stepPrice,
 
                 {/* 가격 정보 */}
                 <View style={styles.priceRow}>
-                    <Text style={styles.priceText}>시작가: {startPrice.toLocaleString()}원</Text>
-                    <Text style={styles.priceText}>호가: {stepPrice.toLocaleString()}원</Text>
-                    <Text style={styles.priceText}>입찰가: {currentPrice.toLocaleString()}원</Text>
+                    <Text style={styles.priceText}>시작가: {displayStartPrice.toLocaleString()}원</Text>
+                    <Text style={styles.priceText}>입찰 단위: {displayStepPrice.toLocaleString()}원</Text>
+                    <Text style={styles.priceText}>현재 입찰가: {displayCurrentPrice.toLocaleString()}원</Text>
                 </View>
 
                 {/* 하단 아이콘 */}
                 <View style={styles.meta}>
-                    <Icon name="gavel" size={16} color="black" />
+                    <Icon name="tags" size={16} color="#6495ED" />
                     <Text style={styles.metaText}>{bidCount}</Text>
-                    <Icon name="heart" size={16} color="black" style={{ marginLeft: 10 }} />
+                    <Icon name="star" size={16} color="#6495ED" style={{ marginLeft: 10 }} />
                     <Text style={styles.metaText}>{likeCount}</Text>
                 </View>
             </View>
@@ -40,10 +44,12 @@ const styles = StyleSheet.create({
         height: 160
     },
     image: {
-        width: 96,
-        height: 96,
+        width: 106,
+        height: 106,
         backgroundColor:'#ddd',
-        borderRadius: 8
+        borderRadius: 8,
+        borderWidth: 1,            // 테두리 두께
+        borderColor: '#ccc',       // 테두리 색
     },
     content: {
         flex: 1,
@@ -61,6 +67,7 @@ const styles = StyleSheet.create({
     priceText: {
         fontSize: 13,
         color: '#333',
+        marginBottom: 3,
     },
     meta: {
         flexDirection: 'row',

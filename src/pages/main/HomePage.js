@@ -1,12 +1,15 @@
 // src/pages/main/HomePage.js
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ScrollView, StyleSheet, View, TextInput, Alert } from 'react-native';
 import AuctionItem from '../../components/AuctionItem';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import FloatingButton from '../../components/FloatingButton';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+
+import axios from 'axios';
+import Config from 'react-native-config';
 
 const dummyData = [
     {
@@ -93,7 +96,49 @@ const dummyData = [
 ];
 
 const HomePage = () => {
+    // API URL
+    const apiUrl = Config.API_URL;
+
     const [searchKeyword, setSearchKeyword] = useState('');
+    const [items, setItems] = useState([]);
+    const [page, setPage] = useState(1);
+    const [loading, setLoading] = useState(false);
+    const [hasMore, setHasMore] = useState(true);
+
+    useEffect(() => {
+        getItemList();
+    }, []);
+
+    const getItemList = async () => {
+        try {
+            const res = await axios.get(`${apiUrl}/api/item`,
+                {
+                    params: { 
+                        page,
+                        searchKeyword
+                    }
+                },
+                {
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                }
+            );
+
+            console.log(res);
+            if(res.data.result == "success") {
+                const newItems = res.data.items;  // 응답 구조에 따라 수정
+                setItems(prev => {
+                    const merged = [...prev, ...newItems];
+                    const uniqueItems = Array.from(new Map(merged.map(i => [i.id, i])).values());
+                    return uniqueItems;
+                });
+            }
+        } catch (err) {
+            console.log(err);
+        }
+    }
+
     const navigation = useNavigation();
 
     const goItemUpload = () => {
@@ -118,16 +163,18 @@ const HomePage = () => {
                 />
             </View>
             <ScrollView contentContainerStyle={styles.scrollContent}>
-                {dummyData.map((item, index) => (
+                {items.map((item, index) => (
                     <View key={item.id} style={index === 0 ? { marginTop: 4 } : null}>
                         <AuctionItem
                             title={item.title}
-                            bidCount={item.bidCount}
-                            likeCount={item.likeCount}
+                            bidCount={item._count.bids}
+                            likeCount={item._count.favorites}
                             startPrice={item.startPrice}
                             stepPrice={item.stepPrice}
                             currentPrice={item.currentPrice}
-                            image={require('../../assets/images/no-image.png')}  // 기본 이미지
+                            image={item.images[0]?.url 
+                                ? { uri: item.images[0].url }
+                                : require('../../assets/images/no-image.png')}  // 기본 이미지
                         />
                     </View>
                 ))}
