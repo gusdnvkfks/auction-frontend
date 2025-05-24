@@ -56,7 +56,6 @@ const SplashPage = ({ navigation, route }) => {
 
             // 토큰이 있다면 이쪽으로 옴
             const isValid = await validateAccessToken(token);
-            console.log("isValid : ", isValid);
             if(isValid) {
                 // 토큰 유효성 검사 통과
                 navigation.replace('Main');
@@ -73,7 +72,6 @@ const SplashPage = ({ navigation, route }) => {
 
         } catch (error) {
             // 에러나도 랜딩페이지
-            console.log("error");
             navigation.replace('Landing');
         }
     }
@@ -86,13 +84,10 @@ const SplashPage = ({ navigation, route }) => {
                 headers: { Authorization: `Bearer ${refreshToken}` }
             });
 
-            console.log("refresh res : ", res);
-
             const { accessToken: newAccessToken } = res.data;
             await AsyncStorage.setItem('accessToken', newAccessToken);
             navigation.replace("Main");
         }catch(err) {
-            console.log("refresh err : ", err);
             // 여기서도 리프레시 토큰이 유효성이 맞지 않거나, 생성에 실패하면
             // asyncStorage에 있는 토큰들 삭제 후 로그인 페이지 이동
             await AsyncStorage.removeItem('accessToken');
@@ -108,10 +103,8 @@ const SplashPage = ({ navigation, route }) => {
             const res = await axios.get(`${apiUrl}/api/validateToken`, {
                 headers: { Authorization: `Bearer ${accessToken}` }
             });
-            console.log("access res : ", res);
             return true;
         } catch (err) {
-            console.log("access err : ", err);
             return false;
         }
     }
@@ -145,8 +138,6 @@ const SplashPage = ({ navigation, route }) => {
                 }
             );
 
-            console.log(res);
-
             if(res.data.result === "success") {
                 // 로그인 요청 후 메인페이지로 이동
                 try {
@@ -161,8 +152,6 @@ const SplashPage = ({ navigation, route }) => {
                         }
                     );
 
-                    console.log(loginRes);
-                    
                     if(loginRes.data.result === "success") {
                         // 메인페이지 이동
                         Alert.alert("로그인까지 성공");
@@ -175,12 +164,10 @@ const SplashPage = ({ navigation, route }) => {
                     navigation.navigate("Login");
                 }
             }else {
-                console.log(res);
                 Alert.alert(res.data.message);
                 return;
             }
         } catch (error) {
-            console.log(error);
         }
     }
 

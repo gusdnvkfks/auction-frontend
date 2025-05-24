@@ -15,6 +15,7 @@ import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import Config from 'react-native-config';
+import AppText from '../../components/AppText';
 
 const SearchPage = () => {
     const apiUrl = Config.API_URL;
@@ -57,7 +58,10 @@ const SearchPage = () => {
                     { keyword: keyword.trim() },
                     { headers: { Authorization: `Bearer ${token}` } }
                 );
-                navigation.navigate('Main', { searchKeyword: keyword.trim() });
+                navigation.navigate('Main', {
+                    screen: '홈',
+                    params: { searchKeyword: keyword }
+                });
             }catch (err) {
                 console.log('검색 기록 저장 실패', err);
             }finally {
@@ -67,7 +71,10 @@ const SearchPage = () => {
     };
 
     const handleSelectKeyword = (keyword) => {
-        navigation.navigate('Main', { searchKeyword: keyword });
+        navigation.navigate('Main', {
+            screen: '홈',
+            params: { searchKeyword: keyword }
+        });
     };
 
     const handleDeleteKeyword = async (keyword) => {
@@ -104,7 +111,7 @@ const SearchPage = () => {
         <View style={styles.recentItem}>
             <TouchableOpacity onPress={() => handleSelectKeyword(item)} style={styles.recentTextBox}>
                 <Icon name="clock-o" size={16} color="#888" style={{ marginRight: 8 }} />
-                <Text style={styles.recentKeyword}>{item}</Text>
+                <AppText style={styles.recentKeyword}>{item}</AppText>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => handleDeleteKeyword(item)}>
                 <Icon name="times" size={16} color="#aaa" />
@@ -129,16 +136,16 @@ const SearchPage = () => {
                     autoFocus
                 />
                 <TouchableOpacity onPress={() => navigation.goBack()}>
-                    <Text style={styles.searchBtn}>닫기</Text>
+                    <AppText style={styles.searchBtn}>닫기</AppText>
                 </TouchableOpacity>
             </View>
 
             {/* 최근 검색어 */}
             <View style={styles.recentHeader}>
-                <Text style={styles.recentTitle}>최근 검색어</Text>
+                <AppText style={styles.recentTitle}>최근 검색어</AppText>
                 {recentSearches.length > 0 && (
                     <TouchableOpacity onPress={clearAll}>
-                        <Text style={styles.clearAll}>전체 삭제</Text>
+                        <AppText style={styles.clearAll}>전체 삭제</AppText>
                     </TouchableOpacity>
                 )}
             </View>
@@ -186,18 +193,14 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         padding: 12,
-        borderBottomWidth: 1,
-        borderColor: '#eee',
     },
-    recentTitle: { fontSize: 16, fontWeight: 'bold' },
+    recentTitle: { fontSize: 18 },
     clearAll: { fontSize: 14, color: '#888' },
     recentItem: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        paddingVertical: 10,
-        borderBottomWidth: 1,
-        borderColor: '#f0f0f0',
+        paddingVertical: 11,
     },
     recentTextBox: {
         flexDirection: 'row',
@@ -206,7 +209,7 @@ const styles = StyleSheet.create({
     },
     recentKeyword: {
         color: '#888',
-        fontSize: 13, // 원하면 크기도 지정
+        fontSize: 14, // 원하면 크기도 지정
     },
     spinnerWrapper: {
         position: 'absolute',
