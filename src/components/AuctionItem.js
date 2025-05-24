@@ -1,14 +1,14 @@
 // components/AuctionItem.js
 import React from 'react';
-import { View, Text, Image, StyleSheet } from 'react-native';
+import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 
-const AuctionItem = ({ image, title, bidCount, likeCount, startPrice, stepPrice, currentPrice }) => {
+const AuctionItem = ({ image, title, bidCount, likeCount, startPrice, stepPrice, currentPrice, onPress }) => {
     const displayStartPrice = typeof startPrice === 'number' ? startPrice.toLocaleString() : '0';
     const displayStepPrice = typeof stepPrice === 'number' ? stepPrice.toLocaleString() : '0';
     const displayCurrentPrice = typeof currentPrice === 'number' ? currentPrice.toLocaleString() : '0';
     return (
-        <View style={styles.container}>
+        <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.8}>
             <Image source={image} style={styles.image} resizeMode="cover" />
             <View style={styles.content}>
                 <Text style={styles.title}>{title}</Text>
@@ -28,7 +28,7 @@ const AuctionItem = ({ image, title, bidCount, likeCount, startPrice, stepPrice,
                     <Text style={styles.metaText}>{likeCount}</Text>
                 </View>
             </View>
-        </View>
+        </TouchableOpacity>
     );
 };
 

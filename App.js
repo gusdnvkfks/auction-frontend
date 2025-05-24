@@ -48,10 +48,10 @@ export default function App() {
                         <Stack.Screen name="Verify" component={VerifyPage} />
                         <Stack.Screen name="TermsOfUse" component={TermsOfUsePage} />
                         {/* <Stack.Screen name="Home" component={HomePage} options={{ headerShown: false }} /> */}
+                        <Stack.Screen name="Search" component={SearchPage} options={{ headerShown: false }} />
                         <Stack.Screen name="Main" component={MainTabNavigator} options={{ headerShown: false }} />
                         <Stack.Screen name="ItemUpload" component={ItemUploadPage} options={{ headerShown: false }} />
                         <Stack.Screen name="ItemDetail" component={ItemDetailPage} options={{ headerShown: false }} />
-                        <Stack.Screen name="Search" component={SearchPage} options={{ headerShown: false }} />
                         
                     </Stack.Navigator>
                 </NavigationContainer>

@@ -1,14 +1,93 @@
-import React from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
-import Icon from 'react-native-vector-icons/Ionicons';
+import React, { useEffect, useState } from 'react';
+import { View, Text, Image, TouchableOpacity, StyleSheet, ScrollView, Alert, Dimensions } from 'react-native';
+import Icon from 'react-native-vector-icons/FontAwesome';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import axios from 'axios';
+import Config from 'react-native-config';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const ItemDetailPage = () => {
+    const apiUrl = Config.API_URL;
+    
+    const navigation = useNavigation();
+    const route = useRoute();
+    const itemId = route.params?.itemId;
+
+    const [item, setItem] = useState(null);
+
+    useEffect(() => {
+        // 경매 물품 상세 조회
+        if(!itemId) {
+            // itemId가 없으면 안되니까 백
+            Alert.alert(
+                "알림",
+                "해당 경매물품을 조회할 수 없습니다.",
+                [
+                    {
+                        text: "확인",
+                        onPress: () => navigation.goBack(),  // ✅ 버튼 눌렀을 때만 뒤로가기
+                    },
+                ],
+                { cancelable: false }
+            );
+        }
+
+        getItemDetail();
+    }, []);
+
+    const getItemDetail = async () => {
+        // itemId가 있으면 조회 하기
+        try {
+            const token = await AsyncStorage.getItem("accessToken");
+            const res = await axios.get(`${apiUrl}/api/item/${itemId}`, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+            if(res.data.result === "success") {
+                console.log(res.data.item);
+                // 조회 성공
+                setItem(res.data.item);
+            }
+        } catch (err) {
+            Alert.alert(
+                "알림",
+                "경매 물품을 조회하지 못했습니다. \n잠시 후 다시 시도해주세요.",
+                [
+                    {
+                        text: "확인",
+                        onPress: () => navigation.goBack(),  // ✅ 버튼 눌렀을 때만 뒤로가기
+                    },
+                ],
+                { cancelable: false }
+            );
+        }
+    }
+
     return (
         <View style={styles.container}>
             <ScrollView>
                 {/* 이미지 영역 */}
-                <View style={styles.imagePlaceholder}>
-                    <Text style={styles.imageText}>사진들어가는 자리</Text>
+                <View style={styles.imageCarouselWrapper}>
+                    <ScrollView
+                        horizontal
+                        pagingEnabled
+                        showsHorizontalScrollIndicator={false}
+                        style={styles.imageCarousel}
+                    >
+                        {item?.images?.map((img, index) => (
+                            <Image
+                                key={index}
+                                source={{ uri: img.url }}
+                                style={styles.carouselImage}
+                                resizeMode="cover"
+                            />
+                        ))}
+                    </ScrollView>
+
+                    <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+                        <Icon name="angle-left" size={28} color="#000" />
+                    </TouchableOpacity>
                 </View>
 
                 {/* 유저 정보 */}
@@ -19,8 +98,8 @@ const ItemDetailPage = () => {
                         style={styles.avatar}
                     />
                     <View>
-                        <Text style={styles.nickname}>닉네임</Text>
-                        <Text style={styles.location}>주안4동</Text>
+                        <Text style={styles.nickname}>{item.user.nickname}</Text>
+                        <Text style={styles.location}>주안동</Text>
                     </View>
                 </View>
 
@@ -57,20 +136,33 @@ const ItemDetailPage = () => {
 
 export default ItemDetailPage;
 
+const HEADER_HEIGHT = 48;
+const screenWidth = Dimensions.get('window').width;
+
 const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#fff',
     },
-    imagePlaceholder: {
+    imageCarouselWrapper: {
+        position: 'relative',
         height: 250,
         backgroundColor: '#eee',
-        justifyContent: 'center',
-        alignItems: 'center',
     },
-    imageText: {
-        fontSize: 18,
-        color: '#777',
+    imageCarousel: {
+        flex: 1,
+    },
+    carouselImage: {
+        width: screenWidth,
+        height: 250,
+    },
+    backButton: {
+        position: 'absolute',
+        top: 48,
+        left: 12,
+        zIndex: 10,
+        borderRadius: 24,
+        padding: 6,
     },
     userInfo: {
         flexDirection: 'row',
