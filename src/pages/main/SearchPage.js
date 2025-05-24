@@ -7,7 +7,8 @@ import {
     StyleSheet,
     TouchableOpacity,
     FlatList,
-    Keyboard
+    Keyboard,
+    ActivityIndicator
 } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { useNavigation } from '@react-navigation/native';
@@ -18,6 +19,7 @@ import Config from 'react-native-config';
 const SearchPage = () => {
     const apiUrl = Config.API_URL;
     
+    const [loading, setLoading] = useState(false);
     const [keyword, setKeyword] = useState('');
     const [recentSearches, setRecentSearches] = useState([]);
     const navigation = useNavigation();
@@ -29,63 +31,72 @@ const SearchPage = () => {
     const loadRecentSearches = async () => {
         const token = await AsyncStorage.getItem('accessToken');
         try {
+            setLoading(true); // 🔹 로딩 시작
             const res = await axios.get(`${apiUrl}/api/user/search-history`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
 
-            console.log("searchHistory res : ", res.data.keywords);
-            
             if (res.data.result === 'success') {
                 setRecentSearches(res.data.keywords);
             }
         }catch (err) {
             console.log('최근 검색어 불러오기 실패', err);
+        }finally {
+            setLoading(false);
         }
     };
 
     const handleSearch = async () => {
         if(!keyword.trim()) return;
         const token = await AsyncStorage.getItem('accessToken');
-        console.log(token);
         if(token) {
             // 토큰이 있을때만 검색 기록 저장장
             try {
-                await axios.post(`${Config.API_URL}/api/user/search-history`,
+                setLoading(true); // 🔹 로딩 시작
+                await axios.post(`${apiUrl}/api/user/search-history`,
                     { keyword: keyword.trim() },
                     { headers: { Authorization: `Bearer ${token}` } }
                 );
-                navigation.navigate('Home', { searchKeyword: keyword.trim() });
+                navigation.navigate('Main', { searchKeyword: keyword.trim() });
             }catch (err) {
                 console.log('검색 기록 저장 실패', err);
+            }finally {
+                setLoading(false);
             }
         }
     };
 
-    const handleSelectKeyword = (kw) => {
-        navigation.navigate('Home', { searchKeyword: kw });
+    const handleSelectKeyword = (keyword) => {
+        navigation.navigate('Main', { searchKeyword: keyword });
     };
 
-    const handleDeleteKeyword = async (kw) => {
+    const handleDeleteKeyword = async (keyword) => {
         const token = await AsyncStorage.getItem('accessToken');
         try {
-            await axios.delete(`${Config.API_URL}/api/search-history/${encodeURIComponent(kw)}`, {
+            setLoading(true); // 🔹 로딩 시작
+            await axios.delete(`${apiUrl}/api/user/search-history/${encodeURIComponent(keyword)}`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
-            setRecentSearches(prev => prev.filter(k => k !== kw));
+            setRecentSearches(prev => prev.filter(k => k !== keyword));
         }catch (err) {
             console.log('검색어 삭제 실패', err);
+        }finally {
+            setLoading(false);
         }
     };
 
     const clearAll = async () => {
         const token = await AsyncStorage.getItem('accessToken');
         try {
-            await axios.delete(`${Config.API_URL}/api/search-history`, {
+            setLoading(true); // 🔹 로딩 시작
+            await axios.delete(`${apiUrl}/api/user/search-history`, {
               headers: { Authorization: `Bearer ${token}` },
             });
             setRecentSearches([]);
         }catch (err) {
             console.log('전체 삭제 실패', err);
+        }finally {
+            setLoading(false);
         }
     };
 
@@ -93,7 +104,7 @@ const SearchPage = () => {
         <View style={styles.recentItem}>
             <TouchableOpacity onPress={() => handleSelectKeyword(item)} style={styles.recentTextBox}>
                 <Icon name="clock-o" size={16} color="#888" style={{ marginRight: 8 }} />
-                <Text>{item}</Text>
+                <Text style={styles.recentKeyword}>{item}</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => handleDeleteKeyword(item)}>
                 <Icon name="times" size={16} color="#aaa" />
@@ -103,41 +114,47 @@ const SearchPage = () => {
 
     return (
         <View style={styles.container}>
-          {/* 상단 검색바 */}
-          <View style={styles.searchHeader}>
-              <TouchableOpacity onPress={() => navigation.goBack()}>
-                  <Icon name="angle-left" size={30} color="#000" />
-              </TouchableOpacity>
-              <TextInput
-                  style={styles.searchInput}
-                  placeholder="검색어를 입력하세요"
-                  value={keyword}
-                  onChangeText={setKeyword}
-                  returnKeyType="search"
-                  onSubmitEditing={handleSearch}
-                  autoFocus
-              />
-              <TouchableOpacity onPress={() => navigation.goBack()}>
-                  <Text style={styles.searchBtn}>닫기</Text>
-              </TouchableOpacity>
-          </View>
+            {/* 상단 검색바 */}
+            <View style={styles.searchHeader}>
+                <TouchableOpacity onPress={() => navigation.goBack()}>
+                    <Icon name="angle-left" size={30} color="#000" />
+                </TouchableOpacity>
+                <TextInput
+                    style={styles.searchInput}
+                    placeholder="검색어를 입력하세요"
+                    value={keyword}
+                    onChangeText={setKeyword}
+                    returnKeyType="search"
+                    onSubmitEditing={handleSearch}
+                    autoFocus
+                />
+                <TouchableOpacity onPress={() => navigation.goBack()}>
+                    <Text style={styles.searchBtn}>닫기</Text>
+                </TouchableOpacity>
+            </View>
 
-          {/* 최근 검색어 */}
-          <View style={styles.recentHeader}>
-              <Text style={styles.recentTitle}>최근 검색어</Text>
-              {recentSearches.length > 0 && (
-                  <TouchableOpacity onPress={clearAll}>
-                      <Text style={styles.clearAll}>전체 삭제</Text>
-                  </TouchableOpacity>
-              )}
-          </View>
+            {/* 최근 검색어 */}
+            <View style={styles.recentHeader}>
+                <Text style={styles.recentTitle}>최근 검색어</Text>
+                {recentSearches.length > 0 && (
+                    <TouchableOpacity onPress={clearAll}>
+                        <Text style={styles.clearAll}>전체 삭제</Text>
+                    </TouchableOpacity>
+                )}
+            </View>
 
-          <FlatList
-              data={recentSearches}
-              keyExtractor={(item, index) => `${item}-${index}`}
-              renderItem={renderItem}
-              contentContainerStyle={{ paddingHorizontal: 12 }}
-          />
+            <FlatList
+                data={recentSearches}
+                keyExtractor={(item, index) => `${item}-${index}`}
+                renderItem={renderItem}
+                contentContainerStyle={{ paddingHorizontal: 12 }}
+            />
+            {loading && (
+                <View style={styles.spinnerWrapper}>
+                    <ActivityIndicator size="large" color="#6495ED" />
+                </View>
+            )}
+
         </View>
     );
 };
@@ -187,6 +204,18 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         flex: 1,
     },
+    recentKeyword: {
+        color: '#888',
+        fontSize: 13, // 원하면 크기도 지정
+    },
+    spinnerWrapper: {
+        position: 'absolute',
+        top: 0, left: 0, right: 0, bottom: 0,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(255,255,255,0.5)', // 살짝 흐리게
+        zIndex: 999,
+    }
 });
 
 export default SearchPage;
