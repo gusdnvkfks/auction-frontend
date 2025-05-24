@@ -1,7 +1,7 @@
 // src/pages/main/HomePage.js
 
 import React, { useState, useEffect } from 'react';
-import { ScrollView, StyleSheet, View, TextInput, Alert } from 'react-native';
+import { Text, StyleSheet, View, TextInput, Alert, FlatList, TouchableOpacity } from 'react-native';
 import AuctionItem from '../../components/AuctionItem';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import FloatingButton from '../../components/FloatingButton';
@@ -10,90 +10,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import axios from 'axios';
 import Config from 'react-native-config';
-
-const dummyData = [
-    {
-        id: 1,
-        title: '휴대폰 올려 봅니다. 희망가로 입찰해주세요. 편하게 가격 제시해주세요.',
-        bidCount: 3,
-        likeCount: 3,
-        startPrice: 10000,
-        stepPrice: 1000,
-        currentPrice: 13000,
-    },
-    {
-        id: 2,
-        title: '안먹는 콜라 대량으로 올립니다. 유통기한 많이 남아있어요.',
-        bidCount: 3,
-        likeCount: 3,
-        startPrice: 10000,
-        stepPrice: 1000,
-        currentPrice: 13000,
-    },
-    {
-        id: 3,
-        title: '안먹는 콜라 대량으로 올립니다. 유통기한 많이 남아있어요.',
-        bidCount: 3,
-        likeCount: 3,
-        startPrice: 10000,
-        stepPrice: 1000,
-        currentPrice: 13000,
-    },
-    {
-        id: 4,
-        title: '안먹는 콜라 대량으로 올립니다. 유통기한 많이 남아있어요.',
-        bidCount: 3,
-        likeCount: 3,
-        startPrice: 10000,
-        stepPrice: 1000,
-        currentPrice: 13000,
-    },
-    {
-        id: 5,
-        title: '안먹는 콜라 대량으로 올립니다. 유통기한 많이 남아있어요.',
-        bidCount: 3,
-        likeCount: 3,
-        startPrice: 10000,
-        stepPrice: 1000,
-        currentPrice: 13000,
-    },
-    {
-        id: 6,
-        title: '안먹는 콜라 대량으로 올립니다. 유통기한 많이 남아있어요.',
-        bidCount: 3,
-        likeCount: 3,
-        startPrice: 10000,
-        stepPrice: 1000,
-        currentPrice: 13000,
-    },
-    {
-        id: 7,
-        title: '안먹는 콜라 대량으로 올립니다. 유통기한 많이 남아있어요.',
-        bidCount: 3,
-        likeCount: 3,
-        startPrice: 10000,
-        stepPrice: 1000,
-        currentPrice: 13000,
-    },
-    {
-        id: 8,
-        title: '안먹는 콜라 대량으로 올립니다. 유통기한 많이 남아있어요.',
-        bidCount: 3,
-        likeCount: 3,
-        startPrice: 10000,
-        stepPrice: 1000,
-        currentPrice: 13000,
-    },
-    {
-        id: 9,
-        title: '안먹는 콜라 대량으로 올립니다. 유통기한 많이 남아있어요.',
-        bidCount: 3,
-        likeCount: 3,
-        startPrice: 10000,
-        stepPrice: 1000,
-        currentPrice: 13000,
-    },
-];
 
 const HomePage = () => {
     // API URL
@@ -104,28 +20,32 @@ const HomePage = () => {
     const [page, setPage] = useState(1);
     const [loading, setLoading] = useState(false);
     const [hasMore, setHasMore] = useState(true);
+    const [cursor, setCursor] = useState(null);
 
     useEffect(() => {
         getItemList();
-    }, []);
+    }, [page]);
 
     const getItemList = async () => {
-        try {
-            const res = await axios.get(`${apiUrl}/api/item`,
-                {
-                    params: { 
-                        page,
-                        searchKeyword
-                    }
-                },
-                {
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                }
-            );
+        // 더 불러올게 있는 지 확인
+        if(loading || !hasMore) {
+            return;
+        }
 
-            console.log(res);
+        // 로딩 true로 세팅하기기
+        setLoading(true);
+        try {
+            const res = await axios.get(`${apiUrl}/api/item`, {
+                params: { 
+                    page,
+                    searchKeyword,
+                    cursor,
+                },
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            },);
+
             if(res.data.result == "success") {
                 const newItems = res.data.items;  // 응답 구조에 따라 수정
                 setItems(prev => {
@@ -133,10 +53,43 @@ const HomePage = () => {
                     const uniqueItems = Array.from(new Map(merged.map(i => [i.id, i])).values());
                     return uniqueItems;
                 });
+
+                setCursor(res.data.nextCursor);
+
+                if(newItems.length < 10) {
+                    // newItems가 10개 보다 작으면 매번 10개씩 불러오니까 더 불러올 데이터가 없다는거
+                    setHasMore(false);
+                }
             }
         } catch (err) {
             console.log(err);
+        } finally {
+            setLoading(false);
         }
+    }
+
+    const handleLoadMore = () => {
+        if(!loading && hasMore) {
+            setPage(prev => prev + 1);
+        }
+    }
+
+    const renderItem = ({ item, index }) => {
+        return (
+            <View key={item.id} style={index === 0 ? { marginTop: 4 } : null}>
+                <AuctionItem
+                    title={item.title}
+                    bidCount={item._count.bids}
+                    likeCount={item._count.favorites}
+                    startPrice={item.startPrice}
+                    stepPrice={item.stepPrice}
+                    currentPrice={item.currentPrice}
+                    image={item.images[0]?.url
+                        ? { uri: item.images[0].url }
+                        : require('../../assets/images/no-image.png')}
+                />
+            </View>
+        );
     }
 
     const navigation = useNavigation();
@@ -153,32 +106,23 @@ const HomePage = () => {
 
     return (
         <View style={{ flex: 1 }}>
-            <View style={styles.searchBox}>
-                <Icon name="search" size={18} color="#888" style={styles.searchIcon} />
-                <TextInput
-                    style={styles.searchInput}
-                    placeholder="검색어를 입력하세요"
-                    value={searchKeyword}
-                    onChangeText={setSearchKeyword}
-                />
-            </View>
-            <ScrollView contentContainerStyle={styles.scrollContent}>
-                {items.map((item, index) => (
-                    <View key={item.id} style={index === 0 ? { marginTop: 4 } : null}>
-                        <AuctionItem
-                            title={item.title}
-                            bidCount={item._count.bids}
-                            likeCount={item._count.favorites}
-                            startPrice={item.startPrice}
-                            stepPrice={item.stepPrice}
-                            currentPrice={item.currentPrice}
-                            image={item.images[0]?.url 
-                                ? { uri: item.images[0].url }
-                                : require('../../assets/images/no-image.png')}  // 기본 이미지
-                        />
-                    </View>
-                ))}
-            </ScrollView>
+            <TouchableOpacity onPress={() => navigation.getParent()?.navigate('Search')}
+                activeOpacity={0.9}
+                style={styles.searchTouchable}  // 바깥 마진은 여기서
+            >
+                {/* <View style={styles.searchBox}> */}
+                    <Icon name="search" size={18} color="#888" style={styles.searchIcon} />
+                    <Text style={styles.fakeInput}>검색어를 입력하세요</Text>
+                {/* </View> */}
+            </TouchableOpacity>
+            <FlatList contentContainerStyle={styles.scrollContent}
+                data={items}
+                renderItem={renderItem}
+                keyExtractor={item => item.id.toString()}
+                onEndReached={handleLoadMore}
+                onEndReachedThreshold={0.2}
+                ListFooterComponent={loading ? <View style={{ padding: 16 }}><Text>로딩 중...</Text></View> : null}
+            />
 
             {/* 고정 등록 버튼 */}
             <FloatingButton onPress={goItemUpload}></FloatingButton>
@@ -193,7 +137,7 @@ const styles = StyleSheet.create({
         padding: 12,
         paddingTop: HEADER_HEIGHT,
     },
-    searchBox: {
+    searchTouchable: {
         top: HEADER_HEIGHT,
         flexDirection: 'row',
         alignItems: 'center',
@@ -205,6 +149,7 @@ const styles = StyleSheet.create({
         margin: 10,
         backgroundColor: '#fff',
         zIndex: 1,
+        height: 40,
     },
     searchIcon: {
         marginRight: 8,
@@ -212,6 +157,13 @@ const styles = StyleSheet.create({
     searchInput: {
         flex: 1,
         height: 40,
+    },
+    fakeInput: {
+        color: '#888',
+        fontSize: 15,
+        flex: 1,
+        lineHeight: 20,              // ✅ 텍스트 정렬 안정화
+        textAlignVertical: 'center'  // ✅ 일부 안드로이드에서 유효
     },
 });
 

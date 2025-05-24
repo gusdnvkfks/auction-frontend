@@ -41,19 +41,78 @@ const SplashPage = ({ navigation, route }) => {
     const checkAuth = async () => {
         try {
             const token = await AsyncStorage.getItem('accessToken');
-            console.log("token : ", token);
-
-            if(token) {
-                // 로그인이 되어있으면 메인화면으로 -> 아직 메인화면 안나옴
-                navigation.replace("Main");
-            }else {
-                // 안되어있으면 Landing화면으로
-                navigation.replace('Landing');
+            const refreshToken = await AsyncStorage.getItem('refreshToken');
+            
+            if(!token) {
+                // 토큰이 없다? -> refreshToken 확인
+                if(!refreshToken) {
+                    // 리프레시 토큰도 없다? -> 랜딩 페이지 ㄱㄱ
+                    navigation.replace('Landing');
+                }else {
+                    // 리프레시 토큰이 있다? -> 토큰갱신
+                    return tryRefreshToken(refreshToken);
+                }
             }
+
+            // 토큰이 있다면 이쪽으로 옴
+            const isValid = await validateAccessToken(token);
+            console.log("isValid : ", isValid);
+            if(isValid) {
+                // 토큰 유효성 검사 통과
+                navigation.replace('Main');
+            }else {
+                // 유효성 검사 실패 -> 리프레시 토큰 확인
+                if(!refreshToken) {
+                    // 리프레시 토큰도 없다? -> 랜딩 페이지 ㄱㄱ
+                    navigation.replace('Landing');
+                }else {
+                    // 리프레시 토큰이 있다? -> 토큰갱신
+                    return tryRefreshToken(refreshToken);
+                }
+            }
+
         } catch (error) {
             // 에러나도 랜딩페이지
             console.log("error");
             navigation.replace('Landing');
+        }
+    }
+
+    // 리프레시 토큰있음 -> 토큰 갱신
+    const tryRefreshToken = async (refreshToken) => {
+        console.log(refreshToken);
+        try {
+            const res = await axios.post(`${apiUrl}/api/refresh-token`, {
+                headers: { Authorization: `Bearer ${refreshToken}` }
+            });
+
+            console.log("refresh res : ", res);
+
+            const { accessToken: newAccessToken } = res.data;
+            await AsyncStorage.setItem('accessToken', newAccessToken);
+            navigation.replace("Main");
+        }catch(err) {
+            console.log("refresh err : ", err);
+            // 여기서도 리프레시 토큰이 유효성이 맞지 않거나, 생성에 실패하면
+            // asyncStorage에 있는 토큰들 삭제 후 로그인 페이지 이동
+            await AsyncStorage.removeItem('accessToken');
+            await AsyncStorage.removeItem('refreshToken');
+            navigation.replace('Landing');
+        }
+    }
+
+    // accessToken 유효성 확인
+    const validateAccessToken = async (accessToken) => {
+        // 토큰이 있으면 유효성 검사 먼저 실행
+        try {
+            const res = await axios.get(`${apiUrl}/api/validateToken`, {
+                headers: { Authorization: `Bearer ${accessToken}` }
+            });
+            console.log("access res : ", res);
+            return true;
+        } catch (err) {
+            console.log("access err : ", err);
+            return false;
         }
     }
 

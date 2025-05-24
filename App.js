@@ -21,6 +21,7 @@ import VerifyPage from './src/pages/auth/VerifyPage';
 import TermsOfUsePage from './src/pages/auth/TermsOfUsePage';
 // main page
 import HomePage from './src/pages/main/HomePage';
+import SearchPage from './src/pages/main/SearchPage';
 // item page
 import ItemUploadPage from './src/pages/item/ItemUploadPage';
 
@@ -49,6 +50,7 @@ export default function App() {
                         {/* <Stack.Screen name="Home" component={HomePage} options={{ headerShown: false }} /> */}
                         <Stack.Screen name="Main" component={MainTabNavigator} options={{ headerShown: false }} />
                         <Stack.Screen name="ItemUpload" component={ItemUploadPage} options={{ headerShown: false }} />
+                        <Stack.Screen name="Search" component={SearchPage} options={{ headerShown: false }} />
                         
                     </Stack.Navigator>
                 </NavigationContainer>

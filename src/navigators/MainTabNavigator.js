@@ -13,12 +13,12 @@ export default function MainTabNavigator() {
             screenOptions={({ route }) => ({
                 headerShown: false,
                 tabBarIcon: ({ color, size }) => {
-                let iconName = 'home';
-                if (route.name === '홈') iconName = 'home';
-                else if (route.name === '게시판') iconName = 'comments';
-                else if (route.name === '마이페이지') iconName = 'user';
+                    let iconName = 'home';
+                    if (route.name === '홈') iconName = 'home';
+                    else if (route.name === '게시판') iconName = 'comments';
+                    else if (route.name === '마이페이지') iconName = 'user';
 
-                return <Icon name={iconName} size={size} color={color} />;
+                    return <Icon name={iconName} size={size} color={color} />;
                 },
                 tabBarActiveTintColor: '#6495ED',
                 tabBarInactiveTintColor: 'gray',

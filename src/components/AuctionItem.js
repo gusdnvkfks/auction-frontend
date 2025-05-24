@@ -4,7 +4,6 @@ import { View, Text, Image, StyleSheet } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 
 const AuctionItem = ({ image, title, bidCount, likeCount, startPrice, stepPrice, currentPrice }) => {
-
     const displayStartPrice = typeof startPrice === 'number' ? startPrice.toLocaleString() : '0';
     const displayStepPrice = typeof stepPrice === 'number' ? stepPrice.toLocaleString() : '0';
     const displayCurrentPrice = typeof currentPrice === 'number' ? currentPrice.toLocaleString() : '0';
