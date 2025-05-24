@@ -35,10 +35,10 @@ const VerifyPage = ({ navigation }) => {
     }
 
     const certificationCallback = async (response) => {
-        console.log(response);
+        // console.log(response);
         if(response.success === "true") {
             const impToken = await getAccessToken();
-            console.log(impToken);
+            // console.log(impToken);
             const res = await axios.get(
                 "https://api.iamport.kr/certifications/" + response.imp_uid, 
                 {

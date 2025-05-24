@@ -32,7 +32,7 @@ const SplashPage = ({ navigation, route }) => {
             const { storeId, channelKey } = route.params;
             startVerify(storeId, channelKey);
         }else if(nextPage === "Main") {
-            console.log('메인페이지');
+            // console.log('메인페이지');
             signUpCall();
         }
     }
@@ -42,7 +42,8 @@ const SplashPage = ({ navigation, route }) => {
         try {
             const token = await AsyncStorage.getItem('accessToken');
             const refreshToken = await AsyncStorage.getItem('refreshToken');
-            
+            console.log("accessToken : ", token);
+            console.log("refreshToken : ", refreshToken);
             if(!token) {
                 // 토큰이 없다? -> refreshToken 확인
                 if(!refreshToken) {
@@ -78,7 +79,7 @@ const SplashPage = ({ navigation, route }) => {
 
     // 리프레시 토큰있음 -> 토큰 갱신
     const tryRefreshToken = async (refreshToken) => {
-        console.log(refreshToken);
+        // console.log(refreshToken);
         try {
             const res = await axios.post(`${apiUrl}/api/refresh-token`, {
                 headers: { Authorization: `Bearer ${refreshToken}` }

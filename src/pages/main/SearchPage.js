@@ -41,7 +41,7 @@ const SearchPage = () => {
                 setRecentSearches(res.data.keywords);
             }
         }catch (err) {
-            console.log('최근 검색어 불러오기 실패', err);
+            // console.log('최근 검색어 불러오기 실패', err);
         }finally {
             setLoading(false);
         }
@@ -63,7 +63,7 @@ const SearchPage = () => {
                     params: { searchKeyword: keyword }
                 });
             }catch (err) {
-                console.log('검색 기록 저장 실패', err);
+                // console.log('검색 기록 저장 실패', err);
             }finally {
                 setLoading(false);
             }
@@ -86,7 +86,7 @@ const SearchPage = () => {
             });
             setRecentSearches(prev => prev.filter(k => k !== keyword));
         }catch (err) {
-            console.log('검색어 삭제 실패', err);
+            // console.log('검색어 삭제 실패', err);
         }finally {
             setLoading(false);
         }
@@ -101,7 +101,7 @@ const SearchPage = () => {
             });
             setRecentSearches([]);
         }catch (err) {
-            console.log('전체 삭제 실패', err);
+            // console.log('전체 삭제 실패', err);
         }finally {
             setLoading(false);
         }

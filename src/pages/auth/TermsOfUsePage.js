@@ -64,7 +64,7 @@ export default function TermsOfUsePage({ navigation }) {
         consent.age14;
     
     const subCertificationContent = (content) => {
-        console.log(content);
+        // console.log(content);
     }
 
     const toggleAll = () => {

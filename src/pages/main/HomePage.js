@@ -80,7 +80,7 @@ const HomePage = () => {
                 }
             }
         } catch (err) {
-            console.log(err);
+            // console.log(err);
         } finally {
             setLoading(false);
         }
@@ -105,6 +105,7 @@ const HomePage = () => {
                     image={item.images[0]?.url
                         ? { uri: item.images[0].url }
                         : require('../../assets/images/no-image.png')}
+                    onPress={() => navigation.navigate('ItemDetail', { itemId: item.id })}
                 />
             </View>
         );

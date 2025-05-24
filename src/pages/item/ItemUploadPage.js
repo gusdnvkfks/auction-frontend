@@ -92,7 +92,7 @@ const ItemUploadPage = ({ navigation }) => {
         
         ImagePicker.launchImageLibrary(options, async (response) => {
             if(response.didCancel || response.errorCode || !response.assets?.length) {
-                console.log('이미지 선택 취소 또는 오류');
+                // console.log('이미지 선택 취소 또는 오류');
                 return;
             }
         
@@ -112,8 +112,8 @@ const ItemUploadPage = ({ navigation }) => {
                     const stat = await RNFS.stat(cleanUri);
                     const sizeMB = stat.size / (1024 * 1024);
 
-                    console.log("sizeMB : ", sizeMB);
-                    console.log("MAX_IMAGE_SIZE_MB : ", MAX_IMAGE_SIZE_MB);
+                    // console.log("sizeMB : ", sizeMB);
+                    // console.log("MAX_IMAGE_SIZE_MB : ", MAX_IMAGE_SIZE_MB);
 
                     if (sizeMB > MAX_IMAGE_SIZE_MB) {
                         Alert.alert('이미지 용량 초과', `2MB를 초과한 이미지는 제외됩니다.\n(${img.fileName || '이름 없음'})`);
@@ -122,7 +122,7 @@ const ItemUploadPage = ({ navigation }) => {
 
                     filtered.push(img);
                 } catch (err) {
-                    console.log('크기 확인 실패:', err);
+                    // console.log('크기 확인 실패:', err);
                 }
             }
 
@@ -191,18 +191,18 @@ const ItemUploadPage = ({ navigation }) => {
                     'Authorization': `Bearer ${accessToken}`
                 }
             });
-            console.log(res);
+            // console.log(res);
             if(res.data.result === "success") {
                 // 성공
                 Alert.alert("경매물품 등록이 완료되었습니다.");
                 navigation.replace("Main");
             }else {
-                console.log(res);
+                // console.log(res);
             }
             
         } catch (error) {
-            console.log('요청실패');
-            console.log(error);
+            // console.log('요청실패');
+            // console.log(error);
         }
 
     };
