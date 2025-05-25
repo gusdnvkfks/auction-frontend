@@ -30,6 +30,32 @@ import MainTabNavigator from './src/navigators/MainTabNavigator';
 
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import Toast, { BaseToast } from 'react-native-toast-message';
+
+const toastConfig = {
+    success: (props) => (
+        <BaseToast
+            {...props}
+            style={{ 
+                backgroundColor: '#eee',  // 회색 배경
+                borderLeftWidth: 0,       // 왼쪽 컬러 바 제거
+                borderRadius: 8,
+                shadowColor: 'transparent',  // 그림자 제거
+            }}
+            contentContainerStyle={{ paddingHorizontal: 16 }}
+            text1Style={{
+                fontSize: 15,
+                color: '#333', // 글씨 색
+                fontWeight: '400',
+            }}
+            text2Style={{
+                fontSize: 13,
+                color: '#666',
+            }}
+        />
+    ),
+};
+
 const Stack = createStackNavigator();
 
 export default function App() {
@@ -58,6 +84,7 @@ export default function App() {
                             
                         </Stack.Navigator>
                     </NavigationContainer>
+                    <Toast config={toastConfig} />
                 </Provider>
             </GestureHandlerRootView>
         </SafeAreaProvider>

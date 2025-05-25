@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet, ScrollView, Alert, Dimensions } from 'react-native';
+import { View, Text, Image, TouchableOpacity, StyleSheet, ScrollView, Alert, Dimensions, Modal, TextInput } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import MaterialIcon from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -16,6 +16,7 @@ import FullScreenImageViewer from '../../components/FullScreenImageViewer';
 import BottomActionModal from '../../components/BottomActionModal';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Toast from 'react-native-toast-message';
 
 dayjs.extend(relativeTime);
 dayjs.locale('ko');
@@ -28,12 +29,15 @@ const ItemDetailPage = () => {
     const route = useRoute();
     const itemId = route.params?.itemId;
 
-    const [item, setItem] = useState(null);                 // 경매 물품 정보보
+    const [item, setItem] = useState(null);                 // 경매 물품 정보
+    const [isAuthority, setIsAuthority] = useState(false);   // 이 경매 물품에 권한이 있는지 수정을 할 수 있는
     const [isFavorite, setIsFavorite] = useState(false);    // 좋아요 아이콘 name을 바꿔줄 state
     const [isVisible, setIsVisible] = useState(false);      // 풀스크린 이미지 모달 visible 여부
     const [currentIndex, setCurrentIndex] = useState(0);    // 풀스크린 이미지 모달에서 이미지의 index state
     const [scrollY, setScrollY] = useState(0);              // 특정 영역까지 스크롤이 되면 헤더 백그라운드 컬러를 바꿔줄 state
     const [isModalVisible, setIsModalVisible] = useState(false);    // 오른쪽 상단 ... 모달
+    const [isBidModalVisible, setIsBidModalVisible] = useState(false);  // 입찰 모달
+    const [bidPrice, setBidPrice] = useState(0);
 
     const openModal = () => setIsModalVisible(true);
     const closeModal = () => setIsModalVisible(false);
@@ -100,7 +104,7 @@ const ItemDetailPage = () => {
         }
     };
 
-    // 경매물품 상세조회회
+    // 경매물품 상세조회
     const getItemDetail = async () => {
         // itemId가 있으면 조회 하기
         try {
@@ -113,6 +117,13 @@ const ItemDetailPage = () => {
             if(res.data.result === "success") {
                 // 조회 성공
                 setItem(res.data.item);
+                // 수정 권한 처리
+                setIsAuthority(res.data.authority);
+                // 찜 아이콘 처리
+                if(res.data.item.favorites.length > 0) {
+                    // 0보다크면 userId, itemId로 조회했기 때문에 찜한거임
+                    setIsFavorite(true);
+                }
             }
         } catch (err) {
             Alert.alert(
@@ -152,6 +163,71 @@ const ItemDetailPage = () => {
     const handleScroll = (e) => {
         setScrollY(e.nativeEvent.contentOffset.y);
     };
+
+    const handleSubmitBid = () => {
+        let price = 0;
+
+        if(item.isBidUnit === 1) {
+            price = item.currentPrice === 0 ? item.startPrice : item.currentPrice + item.bidUnit;
+        }else {
+            const parsed = parseInt(bidPrice);
+            if (isNaN(parsed) || parsed <= item.currentPrice) {
+                return Alert.alert("입찰가는 현재 입찰가보다 높아야 합니다.");
+            }
+            if (parsed % 100 !== 0) {
+                return Alert.alert("입찰가는 100원 단위로 입력해야 합니다.");
+            }
+            price = parsed;
+        }
+
+        // ✅ 여기서 입찰 API 호출
+        submitBid(price);
+    };
+
+    const submitBid = async (price) => {
+        console.log("price : ", price);
+        try {
+            const token = await AsyncStorage.getItem("accessToken");
+            console.log("bid token : ", token);
+            const res = await axios.post(`${apiUrl}/api/bid/create`,
+                {
+                    itemId: itemId,
+                    bidPrice: price,
+                },
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                }
+            );
+            console.log("submitBid : ", res.data);
+            if(res.data.result === "success") {
+                Toast.show({
+                    type: 'success',
+                    text1: '입찰이 완료되었습니다!',
+                    position: 'bottom',
+                    bottomOffset: 120, // ✅ default보다 위쪽으로 (조절 가능)
+                    visibilityTime: 2000,
+                });
+                setItem(res.data.item);
+                closeBidModal();
+                setBidPrice(0);
+            }
+        }catch (error) {
+            console.log('bid error : ', error);
+        }
+    }
+
+    const openBidModal = () => {
+        // 로그인 유저와 이 경매 물품을 올린 유저아이디가 같은지 확인해보기
+        if(isAuthority === true) {
+            Alert.alert("알림", "내 경매품에는 입찰할 수 없습니다.");
+            return;
+        }
+        setIsBidModalVisible(true);
+    };
+    const closeBidModal = () => setIsBidModalVisible(false);
 
     return (
         <View style={styles.container}>
@@ -247,14 +323,28 @@ const ItemDetailPage = () => {
             {/* 하단 버튼 */}
             <View style={[styles.bottomBar, { paddingBottom: 64 + insets.bottom }]}>
                 <TouchableOpacity style={styles.likeBtn} onPress={changeFavoriteItem}>
-                    <Icon name={isFavorite ? 'heart' : 'heart-o'} size={24} color="black" />
+                    <Icon name={isFavorite ? 'heart' : 'heart-o'} size={24} color="#F05650" />
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.bidBtn}>
-                    <Text style={styles.bidText}>입찰하기</Text>
-                </TouchableOpacity>
+                {item?.buyNowPrice ? (
+                    <View style={styles.bidBtnArea}>
+                        <TouchableOpacity style={styles.bidBtn} onPress={openBidModal}>
+                            <Text style={styles.bidText}>입찰하기</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={[styles.bidBtn, { marginLeft: 20, backgroundColor: '#FAFAD2' }]}>
+                            <Text style={[styles.bidText, { color: '#333333'}]}>즉시 낙찰받기</Text>
+                            <Text style={{ fontSize: 12, color: 'gray' }}>즉시구매가({item?.buyNowPrice.toLocaleString()}) </Text>
+                        </TouchableOpacity>
+                    </View>
+                ) : (
+                    <View style={styles.bidBtnArea}>
+                        <TouchableOpacity style={styles.bidBtn}>
+                            <Text style={styles.bidText}>입찰하기</Text>
+                        </TouchableOpacity>
+                    </View>
+                )}
             </View>
 
-            {/* 풀스크린 이미지 모달달 */}
+            {/* 풀스크린 이미지 모달 */}
             <FullScreenImageViewer
                 visible={isVisible}
                 onClose={() => setIsVisible(false)}
@@ -262,6 +352,7 @@ const ItemDetailPage = () => {
                 initialIndex={currentIndex}
             />
 
+            {/* 우측 상단 ... 아이콘 누르면 나오는 모달 */}
             <BottomActionModal
                 visible={isModalVisible}
                 onClose={() => setIsModalVisible(false)}
@@ -272,6 +363,47 @@ const ItemDetailPage = () => {
                 ]}
             />
 
+            {/* 입찰 모달 */}
+            <Modal visible={isBidModalVisible} transparent animationType="slide">
+                <View style={styles.modalOverlay}>
+                    <View style={styles.bidModal}>
+                        <Text style={styles.bidModalTitle}>입찰하기</Text>
+
+                        <Text style={styles.currentPrice}>현재 입찰가: {item?.currentPrice?.toLocaleString()}원</Text>
+
+                        {item?.isBidUnit === 1 ? (
+                            <Text style={styles.yourBid}>
+                                내 입찰가: {(
+                                    (item.currentPrice === 0 
+                                    ? item.startPrice 
+                                    : item.currentPrice + item.bidUnit)
+                                ).toLocaleString()}원
+                            </Text>
+                        ) : (
+                            <>
+                                <Text style={styles.label}>내 입찰가</Text>
+                                <TextInput
+                                    style={styles.input}
+                                    keyboardType="numeric"
+                                    value={bidPrice}
+                                    onChangeText={setBidPrice}
+                                    placeholder="100원 단위까지 입력"
+                                />
+                            </>
+                        )}
+
+                        {/* 버튼 영역 */}
+                        <View style={styles.buttonRow}>
+                            <TouchableOpacity onPress={closeBidModal} style={styles.cancelBtn}>
+                                <Text style={styles.cancelText}>취소</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity onPress={handleSubmitBid} style={styles.confirmBtn}>
+                                <Text style={styles.confirmText}>입찰</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
         </View>
     );
 };
@@ -412,7 +544,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         paddingHorizontal: 16,
         paddingTop: 16,
-        paddingBottom: 16, // 기본값, 여기에 insets.bottom 추가
+        paddingBottom: 16,
         borderTopWidth: 1,
         borderColor: '#ddd',
         position: 'absolute',
@@ -432,9 +564,13 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginRight: 12,
     },
+    bidBtnArea: {
+        flex: 1,
+        flexDirection: 'row',
+    },
     bidBtn: {
         flex: 1,
-        backgroundColor: '#4F80FF',
+        backgroundColor: '#6495ED',
         borderRadius: 8,
         justifyContent: 'center',
         alignItems: 'center',
@@ -444,4 +580,89 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: 'bold',
     },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+
+    bidModal: {
+        width: '85%',
+        backgroundColor: '#fff',
+        borderRadius: 12,
+        padding: 20,
+        alignItems: 'center',
+    },
+
+    bidModalTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        marginBottom: 16,
+    },
+
+    currentPrice: {
+        fontSize: 16,
+        marginBottom: 8,
+    },
+
+    yourBid: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#333',
+    },
+
+    label: {
+        alignSelf: 'flex-start',
+        marginTop: 12,
+        fontSize: 14,
+        color: '#666',
+    },
+
+    input: {
+        width: '100%',
+        height: 40,
+        borderWidth: 1,
+        borderColor: '#ccc',
+        borderRadius: 8,
+        paddingHorizontal: 12,
+        marginTop: 6,
+    },
+
+    buttonRow: {
+        flexDirection: 'row',
+        marginTop: 20,
+        width: '100%',
+        justifyContent: 'space-between',
+    },
+
+    cancelBtn: {
+        flex: 1,
+        backgroundColor: '#F0F0F0',
+        paddingVertical: 12,
+        borderRadius: 8,
+        marginRight: 8,
+        alignItems: 'center',
+    },
+
+    confirmBtn: {
+        flex: 1,
+        backgroundColor: '#6495ED', // Cornflower Blue
+        paddingVertical: 12,
+        borderRadius: 8,
+        marginLeft: 8,
+        alignItems: 'center',
+    },
+
+    cancelText: {
+        color: '#333',
+        fontSize: 16,
+    },
+
+    confirmText: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
+
 });
