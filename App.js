@@ -28,34 +28,38 @@ import ItemDetailPage from './src/pages/item/ItemDetailPage';
 // NAVIGATORS
 import MainTabNavigator from './src/navigators/MainTabNavigator';
 
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+
 const Stack = createStackNavigator();
 
 export default function App() {
     return (
-        <GestureHandlerRootView style={{ flex: 1 }}>
-            <Provider store={store}>{/* ✅ 이거 안 넣으면 Redux 작동안 함 */}
-                <NavigationContainer>
-                    <Stack.Navigator
-                        initialRouteName="Splash"
-                        screenOptions={({ navigation }) => ({
-                            header: () => <HeaderLayout navigation={navigation} />,
-                        })}
-                    >
-                        <Stack.Screen name="Splash" component={SplashPage} options={{ headerShown: false }} initialParams={{ nextPage: 'Landing', text: '' }}/>
-                        <Stack.Screen name="Landing" component={LandingPage} options={{ headerShown: false }} />
-                        <Stack.Screen name="Login" component={LoginPage} />
-                        <Stack.Screen name="Location" component={LocationPage} />
-                        <Stack.Screen name="Verify" component={VerifyPage} />
-                        <Stack.Screen name="TermsOfUse" component={TermsOfUsePage} />
-                        {/* <Stack.Screen name="Home" component={HomePage} options={{ headerShown: false }} /> */}
-                        <Stack.Screen name="Search" component={SearchPage} options={{ headerShown: false }} />
-                        <Stack.Screen name="Main" component={MainTabNavigator} options={{ headerShown: false }} />
-                        <Stack.Screen name="ItemUpload" component={ItemUploadPage} options={{ headerShown: false }} />
-                        <Stack.Screen name="ItemDetail" component={ItemDetailPage} options={{ headerShown: false }} />
-                        
-                    </Stack.Navigator>
-                </NavigationContainer>
-            </Provider>
-        </GestureHandlerRootView>
+        <SafeAreaProvider>
+            <GestureHandlerRootView style={{ flex: 1 }}>
+                <Provider store={store}>{/* ✅ 이거 안 넣으면 Redux 작동안 함 */}
+                    <NavigationContainer>
+                        <Stack.Navigator
+                            initialRouteName="Splash"
+                            screenOptions={({ navigation }) => ({
+                                header: () => <HeaderLayout navigation={navigation} />,
+                            })}
+                        >
+                            <Stack.Screen name="Splash" component={SplashPage} options={{ headerShown: false }} initialParams={{ nextPage: 'Landing', text: '' }}/>
+                            <Stack.Screen name="Landing" component={LandingPage} options={{ headerShown: false }} />
+                            <Stack.Screen name="Login" component={LoginPage} />
+                            <Stack.Screen name="Location" component={LocationPage} />
+                            <Stack.Screen name="Verify" component={VerifyPage} />
+                            <Stack.Screen name="TermsOfUse" component={TermsOfUsePage} />
+                            {/* <Stack.Screen name="Home" component={HomePage} options={{ headerShown: false }} /> */}
+                            <Stack.Screen name="Search" component={SearchPage} options={{ headerShown: false }} />
+                            <Stack.Screen name="Main" component={MainTabNavigator} options={{ headerShown: false }} />
+                            <Stack.Screen name="ItemUpload" component={ItemUploadPage} options={{ headerShown: false }} />
+                            <Stack.Screen name="ItemDetail" component={ItemDetailPage} options={{ headerShown: false }} />
+                            
+                        </Stack.Navigator>
+                    </NavigationContainer>
+                </Provider>
+            </GestureHandlerRootView>
+        </SafeAreaProvider>
     );
 }
