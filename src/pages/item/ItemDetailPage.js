@@ -171,11 +171,39 @@ const ItemDetailPage = () => {
             price = item.currentPrice === 0 ? item.startPrice : item.currentPrice + item.bidUnit;
         }else {
             const parsed = parseInt(bidPrice);
-            if (isNaN(parsed) || parsed <= item.currentPrice) {
-                return Alert.alert("입찰가는 현재 입찰가보다 높아야 합니다.");
+            if (isNaN(parsed)) {
+                Toast.show({
+                    type: 'error',
+                    text1: '숫자를 입력해주세요.',
+                    position: 'bottom',
+                    bottomOffset: 120, // ✅ default보다 위쪽으로 (조절 가능)
+                    visibilityTime: 2000,
+                });
+                return;
             }
+
+            console.log(parsed);
+            console.log(item.currentPrice);
+            if ((item.currentPrice > 0 && parsed <= item.currentPrice) || item.currentPrice === 0 && parsed < item.startPrice) {
+                Toast.show({
+                    type: 'error',
+                    text1: item.currentPrice === 0 ? '입찰가는 시작가보다 높아야 합니다.' : '입찰가는 현재가보다 높아야 합니다.',
+                    position: 'bottom',
+                    bottomOffset: 120, // ✅ default보다 위쪽으로 (조절 가능)
+                    visibilityTime: 2000,
+                });
+                return;
+            }
+
             if (parsed % 100 !== 0) {
-                return Alert.alert("입찰가는 100원 단위로 입력해야 합니다.");
+                Toast.show({
+                    type: 'error',
+                    text1: '입찰가에 10원단위는 입력할 수 없습니다.',
+                    position: 'bottom',
+                    bottomOffset: 120, // ✅ default보다 위쪽으로 (조절 가능)
+                    visibilityTime: 2000,
+                });
+                return;
             }
             price = parsed;
         }
@@ -185,10 +213,8 @@ const ItemDetailPage = () => {
     };
 
     const submitBid = async (price) => {
-        console.log("price : ", price);
         try {
             const token = await AsyncStorage.getItem("accessToken");
-            console.log("bid token : ", token);
             const res = await axios.post(`${apiUrl}/api/bid/create`,
                 {
                     itemId: itemId,
@@ -201,7 +227,6 @@ const ItemDetailPage = () => {
                     }
                 }
             );
-            console.log("submitBid : ", res.data);
             if(res.data.result === "success") {
                 Toast.show({
                     type: 'success',
@@ -215,14 +240,48 @@ const ItemDetailPage = () => {
                 setBidPrice(0);
             }
         }catch (error) {
-            console.log('bid error : ', error);
+            // console.log("errorResponse : ", error.response.data);
+            closeBidModal();
+            setBidPrice(0);
+            const errorCode = error.response?.data?.errorCode;
+
+            const toastOptions = {
+                type: 'error',
+                position: 'bottom',
+                bottomOffset: 120,
+                visibilityTime: 2000,
+            };
+            
+            switch (errorCode) {
+                case 4001:
+                    Toast.show({ ...toastOptions, text1: '유저 정보가 유효하지 않습니다.' });
+                    break;
+                case 4002:
+                    Toast.show({ ...toastOptions, text1: '상품 정보가 잘못되었습니다.' });
+                    break;
+                case 4003:
+                    Toast.show({ ...toastOptions, text1: '입찰 금액을 입력해주세요.' });
+                    break;
+                case 4004:
+                    Toast.show({ ...toastOptions, text1: '마지막 입찰자입니다.' });
+                    break;
+                default:
+                    Toast.show({ ...toastOptions, text1: '입찰에 실패했습니다.' });
+                    break;
+            }
         }
     }
 
     const openBidModal = () => {
         // 로그인 유저와 이 경매 물품을 올린 유저아이디가 같은지 확인해보기
         if(isAuthority === true) {
-            Alert.alert("알림", "내 경매품에는 입찰할 수 없습니다.");
+            Toast.show({
+                type: 'error',
+                text1: '내 경매 물품에는 입찰할 수 없습니다.',
+                position: 'bottom',
+                bottomOffset: 120, // ✅ default보다 위쪽으로 (조절 가능)
+                visibilityTime: 2000,
+            });
             return;
         }
         setIsBidModalVisible(true);
@@ -243,7 +302,7 @@ const ItemDetailPage = () => {
                 <ScrollView 
                     style={{ flex: 1 }}
                     contentContainerStyle={{ 
-                        paddingBottom: 200,
+                        paddingBottom: 140 + insets.bottom,
                         minHeight: Dimensions.get('window').height - HEADER_HEIGHT,
                     }}
                     onScroll={handleScroll}
@@ -275,14 +334,15 @@ const ItemDetailPage = () => {
 
                     {/* 유저 정보 */}
                     <View style={styles.userInfo}>
-                        <Image
-                            // source={require('../../assets/images/no-image.png')} // 대체 이미지 경로
-                            // source={require('../../../assets/images/no-image.png')}
-                            style={styles.avatar}
-                        />
-                        <View>
-                            <AppText style={styles.nickname}>{item?.user?.nickname}</AppText>
-                            <AppText style={styles.location}>{item?.user?.city} {item?.user?.gu} {item?.user?.dong}</AppText>
+                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                            <Image style={styles.avatar} />
+                            <View>
+                                <AppText style={styles.nickname}>{item?.user?.nickname}</AppText>
+                                <AppText style={styles.location}>{item?.user?.city} {item?.user?.gu} {item?.user?.dong}</AppText>
+                            </View>
+                        </View>
+                        <View style={styles.viewLikeBox}>
+                            <AppText style={styles.viewLikeText}>조회 {item?.viewCount ?? 0} · 찜 {item?._count?.favorites ?? 0}</AppText>
                         </View>
                     </View>
 
@@ -306,16 +366,47 @@ const ItemDetailPage = () => {
                     <View 
                         style={[
                             styles.infoRow,
-                            item?.description?.length < 50 && { paddingTop: screenHeight * 0.08, bottom: -50 } // 설명이 짧으면 최소 높이 줌
+                            item?.description?.length < 50 && { paddingTop: screenHeight * 0.08, bottom: -40 } // 설명이 짧으면 최소 높이 줌
                         ]}
                     >
-                        <View style={styles.infoLeft}>
-                            <AppText style={styles.infoText}>조회 {item?.viewCount ?? 0} · 찜 {item?._count?.favorites ?? 0}</AppText>
+                    </View>
+                    {item?._count?.bids > 0 && (
+                        <View style={styles.bidNoticeBox}>
+                            <AppText style={styles.bidNoticeText}>
+                                {item._count.bids}명 입찰 중!
+                            </AppText>
                         </View>
-                        <View style={styles.infoRight}>
-                            <AppText style={styles.infoText2}> 현재 입찰가: {item?.currentPrice?.toLocaleString() ?? 0}원</AppText>
-                            <AppText style={styles.infoText}> 입찰 단위: {item?.bidUnit?.toLocaleString() ?? 0}원</AppText>
+                    )}
+                    <View style={styles.priceContainer}>
+                        <View style={styles.priceBox}>
+                            <AppText style={styles.priceLabel}>경매 시작가</AppText>
+                            <AppText style={styles.priceValue}>
+                                {item?.startPrice?.toLocaleString()}원
+                            </AppText>
                         </View>
+                        <View style={styles.priceBox}>
+                            <AppText style={styles.priceLabel}>현재 입찰가</AppText>
+                            {item?.currentPrice > 0 ? (
+                                <>
+                                    <AppText style={styles.priceValue}>
+                                        {item.currentPrice.toLocaleString()}원
+                                        {/* {item?._count?.bids > 0 && ` · ${item._count.bids}명 입찰 중`} */}
+                                    </AppText>
+                                </>
+                            ) : (
+                                <>
+                                    <AppText style={styles.firstBidText}>첫 입찰자가 되어주세요!</AppText>
+                                </>
+                            )}
+                        </View>
+                        {item?.isBidUnit === 1 && (
+                            <View style={styles.priceBox}>
+                                <AppText style={styles.priceLabel}>입찰 단위</AppText>
+                                <AppText style={styles.priceValue}>
+                                    {item?.bidUnit?.toLocaleString()}원
+                                </AppText>
+                            </View>
+                        )}
                     </View>
                 </ScrollView>
             </View>
@@ -337,7 +428,7 @@ const ItemDetailPage = () => {
                     </View>
                 ) : (
                     <View style={styles.bidBtnArea}>
-                        <TouchableOpacity style={styles.bidBtn}>
+                        <TouchableOpacity style={styles.bidBtn} onPress={openBidModal}>
                             <Text style={styles.bidText}>입찰하기</Text>
                         </TouchableOpacity>
                     </View>
@@ -459,12 +550,20 @@ const styles = StyleSheet.create({
         borderRadius: 24,
         padding: 6,
     },
-    userInfo: {
-        flexDirection: 'row',
-        padding: 16,
-        borderBottomWidth: 1,
-        borderColor: '#ddd',
-        alignItems: 'center',
+    // userInfo: {
+    //     flexDirection: 'row',
+    //     padding: 16,
+    //     borderBottomWidth: 1,
+    //     borderColor: '#ddd',
+    //     alignItems: 'center',
+    // },
+    nickname: {
+        fontSize: 18,
+        marginBottom: 5,
+    },
+    location: {
+        color: '#777',
+        fontSize: 14,
     },
     avatar: {
         width: 48,
@@ -473,13 +572,22 @@ const styles = StyleSheet.create({
         marginRight: 12,
         backgroundColor: '#ccc',
     },
-    nickname: {
-        fontSize: 18,
-        marginBottom: 5,
+    userInfo: {
+        flexDirection: 'row',
+        padding: 16,
+        borderBottomWidth: 1,
+        borderColor: '#ddd',
+        alignItems: 'center',
+        justifyContent: 'space-between', // ✅ 오른쪽 정렬 가능하게
     },
-    location: {
-        color: '#777',
-        fontSize: 14,
+    viewLikeBox: {
+        alignItems: 'flex-end',
+        paddingTop: 20,
+    },
+
+    viewLikeText: {
+        fontSize: 13,
+        color: '#666',
     },
     titleBox: {
         flexDirection: 'row',
@@ -522,23 +630,45 @@ const styles = StyleSheet.create({
         marginBottom: 12,
         bottom: -50,
     },
-    infoLeft: {
-        flex: 1,
-        justifyContent: 'center',
+    bidNoticeBox: {
+        paddingHorizontal: 16,
+        paddingBottom: 5,
     },
-    infoRight: {
-        alignItems: 'flex-end',
-        justifyContent: 'center',
-    },
-    infoText: {
+    bidNoticeText: {
         fontSize: 14,
-        color: 'gray',
-        marginBottom: 2,
+        fontWeight: '500',
+        color: '#6495ED',
     },
-    infoText2: {
-        fontSize: 18,
-        color: '#444',
-        marginBottom: 2,
+    priceContainer: {
+        flexDirection: 'row',
+        borderTopWidth: 1,
+        borderTopColor: '#eee',
+        paddingTop: 12,
+        marginTop: 12,
+        justifyContent: 'space-around',
+    },
+    priceBox: {
+        alignItems: 'center',
+        flex: 1, // 각 항목 너비 동일하게
+    },
+    priceLabel: {
+        fontSize: 14,
+        color: '#888',
+        marginBottom: 4,
+    },
+    priceValue: {
+        fontSize: 14,
+        fontWeight: 'bold',
+        color: '#222',
+    },
+    firstBidText: {
+        fontSize: 13,
+        color: '#6495ED',
+        marginTop: 4,
+    },
+    subInfo: {
+        fontSize: 11,
+        color: '#888',
     },
     bottomBar: {
         flexDirection: 'row',

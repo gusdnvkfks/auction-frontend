@@ -36,21 +36,42 @@ const toastConfig = {
     success: (props) => (
         <BaseToast
             {...props}
-            style={{ 
-                backgroundColor: '#eee',  // 회색 배경
-                borderLeftWidth: 0,       // 왼쪽 컬러 바 제거
+            style={{
+                backgroundColor: '#e6f4ea',     // 연한 초록
+                borderLeftColor: '#34a853',     // 초록 강조선
+                borderLeftWidth: 4,
                 borderRadius: 8,
-                shadowColor: 'transparent',  // 그림자 제거
             }}
-            contentContainerStyle={{ paddingHorizontal: 16 }}
+            contentContainerStyle={{ paddingHorizontal: 14 }}
             text1Style={{
-                fontSize: 15,
-                color: '#333', // 글씨 색
-                fontWeight: '400',
+                fontSize: 13,
+                fontWeight: '500',
+                color: '#202124', // 다크 그레이
             }}
             text2Style={{
+                fontSize: 11,
+                color: '#5f6368',
+            }}
+        />
+    ),
+    error: (props) => (
+        <BaseToast
+            {...props}
+            style={{
+                backgroundColor: '#fce8e6',     // 연한 빨강
+                borderLeftColor: '#d93025',     // 빨강 강조선
+                borderLeftWidth: 4,
+                borderRadius: 8,
+            }}
+            contentContainerStyle={{ paddingHorizontal: 14 }}
+            text1Style={{
                 fontSize: 13,
-                color: '#666',
+                fontWeight: '500',
+                color: '#202124',
+            }}
+            text2Style={{
+                fontSize: 11,
+                color: '#5f6368',
             }}
         />
     ),
