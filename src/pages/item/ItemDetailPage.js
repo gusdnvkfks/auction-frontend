@@ -1,11 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet, ScrollView, Alert, Dimensions, Modal, TextInput } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import MaterialIcon from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import axios from 'axios';
 import Config from 'react-native-config';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import AppText from '../../components/AppText';
 
 import dayjs from 'dayjs';
@@ -17,6 +16,8 @@ import BottomActionModal from '../../components/BottomActionModal';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
+
+import { AuthContext } from '../../contexts/AuthContext';
 
 dayjs.extend(relativeTime);
 dayjs.locale('ko');
@@ -37,7 +38,10 @@ const ItemDetailPage = () => {
     const [scrollY, setScrollY] = useState(0);              // 특정 영역까지 스크롤이 되면 헤더 백그라운드 컬러를 바꿔줄 state
     const [isModalVisible, setIsModalVisible] = useState(false);    // 오른쪽 상단 ... 모달
     const [isBidModalVisible, setIsBidModalVisible] = useState(false);  // 입찰 모달
+    const [isSuccessfulBidModalVisible, setIsSuccessfullBidModalVisible] = useState(false);  // 낙찰 모달
     const [bidPrice, setBidPrice] = useState(0);
+
+    const { token } = useContext(AuthContext);
 
     const openModal = () => setIsModalVisible(true);
     const closeModal = () => setIsModalVisible(false);
@@ -69,7 +73,6 @@ const ItemDetailPage = () => {
 
     // 조회수 증가
     const increaseViewCount = async () => {
-        const token = await AsyncStorage.getItem("accessToken");
         if(token) {
             try {
                 await axios.post(`${apiUrl}/api/item/view-count`,
@@ -108,7 +111,6 @@ const ItemDetailPage = () => {
     const getItemDetail = async () => {
         // itemId가 있으면 조회 하기
         try {
-            const token = await AsyncStorage.getItem("accessToken");
             const res = await axios.get(`${apiUrl}/api/item/${itemId}`, {
                 headers: {
                     Authorization: `Bearer ${token}`,
@@ -143,7 +145,16 @@ const ItemDetailPage = () => {
     // 좋아요 저장 및 삭제
     const changeFavoriteItem = async () => {
         try {
-            const token = await AsyncStorage.getItem('accessToken');
+            if (!token) {
+                Toast.show({
+                    type: 'error',
+                    text1: '로그인이 필요합니다.',
+                    position: 'bottom',
+                    bottomOffset: 120, // ✅ default보다 위쪽으로 (조절 가능)
+                    visibilityTime: 2000,
+                });
+                return;
+            }
             await axios.post(`${apiUrl}/api/item/favorite`, 
                 { itemId },  // body
                 {
@@ -164,6 +175,7 @@ const ItemDetailPage = () => {
         setScrollY(e.nativeEvent.contentOffset.y);
     };
 
+    // 입찰 모달에서 입찰
     const handleSubmitBid = () => {
         let price = 0;
 
@@ -182,8 +194,6 @@ const ItemDetailPage = () => {
                 return;
             }
 
-            console.log(parsed);
-            console.log(item.currentPrice);
             if ((item.currentPrice > 0 && parsed <= item.currentPrice) || item.currentPrice === 0 && parsed < item.startPrice) {
                 Toast.show({
                     type: 'error',
@@ -212,9 +222,19 @@ const ItemDetailPage = () => {
         submitBid(price);
     };
 
+    // 입찰 처리
     const submitBid = async (price) => {
         try {
-            const token = await AsyncStorage.getItem("accessToken");
+            if (!token) {
+                Toast.show({
+                    type: 'error',
+                    text1: '로그인이 필요합니다.',
+                    position: 'bottom',
+                    bottomOffset: 120, // ✅ default보다 위쪽으로 (조절 가능)
+                    visibilityTime: 2000,
+                });
+                return;
+            }
             const res = await axios.post(`${apiUrl}/api/bid/create`,
                 {
                     itemId: itemId,
@@ -272,6 +292,7 @@ const ItemDetailPage = () => {
         }
     }
 
+    // 입찰 모달 열기
     const openBidModal = () => {
         // 로그인 유저와 이 경매 물품을 올린 유저아이디가 같은지 확인해보기
         if(isAuthority === true) {
@@ -286,7 +307,102 @@ const ItemDetailPage = () => {
         }
         setIsBidModalVisible(true);
     };
+    
+    // 입찰 모달 닫기
     const closeBidModal = () => setIsBidModalVisible(false);
+
+    // 낙찰 모달 열기
+    const openSuccessfullBidModal = () => setIsSuccessfullBidModalVisible(true);
+
+    // 낙찰 모달 닫기
+    const closeSuccessfullBidModal = () => setIsSuccessfullBidModalVisible(false);
+    
+    // 낙찰
+    const handleSuccessfullBid = async () => {
+        try {
+            if (!token) {
+                Toast.show({
+                    type: 'error',
+                    text1: '로그인이 필요합니다.',
+                    position: 'bottom',
+                    bottomOffset: 120, // ✅ default보다 위쪽으로 (조절 가능)
+                    visibilityTime: 2000,
+                });
+                return;
+            }
+
+            const res = await axios.post(`${apiUrl}/api/bid/successBid`, 
+                {
+                    itemId: itemId,
+                    buyNowPrice: item.buyNowPrice,
+                    isInstant: true,
+                },
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                }
+            );
+
+            console.log(res);
+            if(res.data.result === "success") {
+                Toast.show({
+                    type: 'success',
+                    text1: '본 물품에 낙찰되었습니다. \n경매자와 채팅을 통해 거래약속을 잡으세요.',
+                    position: 'bottom',
+                    bottomOffset: 120, // ✅ default보다 위쪽으로 (조절 가능)
+                    visibilityTime: 2000,
+                });
+                setItem(res.data.item);
+                closeSuccessfullBidModal();
+            }
+        }catch (error) {
+            console.log(error);
+            closeSuccessfullBidModal();
+            const errorCode = error.response?.data?.errorCode;
+
+            const toastOptions = {
+                type: 'error',
+                position: 'bottom',
+                bottomOffset: 120,
+                visibilityTime: 2000,
+            };
+            
+            switch (errorCode) {
+                case 4001:
+                    Toast.show({ ...toastOptions, text1: '유저 정보가 유효하지 않습니다.' });
+                    break;
+                case 4002:
+                    Toast.show({ ...toastOptions, text1: '상품 정보가 잘못되었습니다.' });
+                    break;
+                case 4006:
+                    Toast.show({ ...toastOptions, text1: '낙찰 타입이 유효하지 않습니다.' });
+                    break;
+                case 4007:
+                    Toast.show({ ...toastOptions, text1: '즉시 구매가가 유효하지 않습니다.' });
+                    break;
+                case 4009:
+                    Toast.show({ ...toastOptions, text1: '경매 물품이 존재하지 않거나 삭제되었습니다.' });
+                    break;
+                case 4010:
+                    Toast.show({ ...toastOptions, text1: '경매중인 물품이 아닙니다.' });
+                    break;
+                case 4011:
+                    Toast.show({ ...toastOptions, text1: '이미 낙찰된 경매 물품 입니다.' });
+                    break;
+                case 4012:
+                    Toast.show({ ...toastOptions, text1: '이미 마감된 경매 물품 입니다.' });
+                    break;
+                case 4013:
+                    Toast.show({ ...toastOptions, text1: '설정된 즉시 구매가와 일치하지 않습니다.' });
+                    break;
+                default:
+                    Toast.show({ ...toastOptions, text1: '낙찰에에 실패했습니다.' });
+                    break;
+            }
+        }
+    }
 
     return (
         <View style={styles.container}>
@@ -327,6 +443,17 @@ const ItemDetailPage = () => {
                                         style={styles.carouselImage}
                                         resizeMode="cover"
                                     />
+                                    {/* ✅ 낙찰 완료 오버레이 */}
+                                    {item.state === 2 && (
+                                        <View style={styles.overlay}>
+                                            <Image
+                                                source={require('../../assets/images/logo.png')} // 경매봉 이미지
+                                                style={styles.gavel}
+                                                resizeMode="contain"
+                                            />
+                                            <Text style={styles.overlayText}>낙찰완료!</Text>
+                                        </View>
+                                    )}
                                 </TouchableOpacity>
                             ))}
                         </ScrollView>
@@ -418,10 +545,10 @@ const ItemDetailPage = () => {
                 </TouchableOpacity>
                 {item?.buyNowPrice ? (
                     <View style={styles.bidBtnArea}>
-                        <TouchableOpacity style={styles.bidBtn} onPress={openBidModal}>
+                        <TouchableOpacity style={[styles.bidBtn, item.state === 2 && styles.disabledBtn]} onPress={openBidModal} disabled={item.state === 2}>
                             <Text style={styles.bidText}>입찰하기</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity style={[styles.bidBtn, { marginLeft: 20, backgroundColor: '#FAFAD2' }]}>
+                        <TouchableOpacity style={[styles.bidBtn, { marginLeft: 20, backgroundColor: '#FAFAD2' }]} onPress={openSuccessfullBidModal}>
                             <Text style={[styles.bidText, { color: '#333333'}]}>즉시 낙찰받기</Text>
                             <Text style={{ fontSize: 12, color: 'gray' }}>즉시구매가({item?.buyNowPrice.toLocaleString()}) </Text>
                         </TouchableOpacity>
@@ -495,6 +622,34 @@ const ItemDetailPage = () => {
                     </View>
                 </View>
             </Modal>
+
+            {/* 즉시 낙찰 모달 */}
+            <Modal visible={isSuccessfulBidModalVisible} transparent animationType="slide">
+                <View style={styles.modalOverlay}>
+                    <View style={styles.bidModal}>
+                        <Text style={styles.bidModalTitle}>즉시 낙찰받기</Text>
+
+                        <Text style={styles.currentPrice}>
+                            즉시 구매가: {item?.buyNowPrice?.toLocaleString()}원
+                        </Text>
+
+                        <Text style={styles.warningText}>
+                            즉시 낙찰 시 본 상품은 더 이상 입찰이 불가능하며,{'\n'}
+                            낙찰이 확정됩니다. 진행하시겠습니까?
+                        </Text>
+
+                        {/* 버튼 영역 */}
+                        <View style={styles.buttonRow}>
+                            <TouchableOpacity onPress={closeSuccessfullBidModal} style={styles.cancelBtn}>
+                                <Text style={styles.cancelText}>취소</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity onPress={handleSuccessfullBid} style={styles.confirmBtn}>
+                                <Text style={styles.confirmText}>낙찰받기</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
         </View>
     );
 };
@@ -543,12 +698,44 @@ const styles = StyleSheet.create({
         width: screenWidth,
         height: 350,
     },
+    overlay: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 2,
+    },
+    gavel: {
+        width: 160,
+        height: 160,
+        // transform: [{ rotate: '30deg' }],
+        opacity: 0.6,
+    },
+    overlayText: {
+        // position: 'absolute',
+        fontSize: 36,
+        fontWeight: 'bold',
+        color: '#fff',
+        textShadowColor: 'rgba(0, 0, 0, 0.7)',
+        textShadowOffset: { width: 2, height: 2 },
+        textShadowRadius: 4,
+        // transform: [{ rotate: '30deg' }], // ← ✅ 대각선으로 회전
+        letterSpacing: 20,
+        opacity: 0.6,
+    },
     backButton: {
         position: 'absolute',
         left: 12,
         zIndex: 10,
         borderRadius: 24,
         padding: 6,
+    },
+    disabledBtn: {
+        opacity: 0.6,
     },
     // userInfo: {
     //     flexDirection: 'row',
@@ -716,7 +903,6 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
     },
-
     bidModal: {
         width: '85%',
         backgroundColor: '#fff',
@@ -724,31 +910,26 @@ const styles = StyleSheet.create({
         padding: 20,
         alignItems: 'center',
     },
-
     bidModalTitle: {
         fontSize: 18,
         fontWeight: 'bold',
         marginBottom: 16,
     },
-
     currentPrice: {
         fontSize: 16,
         marginBottom: 8,
     },
-
     yourBid: {
         fontSize: 16,
         fontWeight: 'bold',
         color: '#333',
     },
-
     label: {
         alignSelf: 'flex-start',
         marginTop: 12,
         fontSize: 14,
         color: '#666',
     },
-
     input: {
         width: '100%',
         height: 40,
@@ -758,14 +939,12 @@ const styles = StyleSheet.create({
         paddingHorizontal: 12,
         marginTop: 6,
     },
-
     buttonRow: {
         flexDirection: 'row',
         marginTop: 20,
         width: '100%',
         justifyContent: 'space-between',
     },
-
     cancelBtn: {
         flex: 1,
         backgroundColor: '#F0F0F0',
@@ -774,7 +953,6 @@ const styles = StyleSheet.create({
         marginRight: 8,
         alignItems: 'center',
     },
-
     confirmBtn: {
         flex: 1,
         backgroundColor: '#6495ED', // Cornflower Blue
@@ -783,16 +961,21 @@ const styles = StyleSheet.create({
         marginLeft: 8,
         alignItems: 'center',
     },
-
     cancelText: {
         color: '#333',
         fontSize: 16,
     },
-
     confirmText: {
         color: '#fff',
         fontSize: 16,
         fontWeight: 'bold',
+    },
+    warningText: {
+        fontSize: 13,
+        color: '#666',
+        textAlign: 'center',
+        marginBottom: 10,
+        lineHeight: 20,
     },
 
 });
