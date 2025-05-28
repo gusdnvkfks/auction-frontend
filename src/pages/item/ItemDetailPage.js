@@ -19,6 +19,8 @@ import Toast from 'react-native-toast-message';
 
 import { AuthContext } from '../../contexts/AuthContext';
 
+import useRemainingTime from '../../hooks/useRemainingTime';
+
 dayjs.extend(relativeTime);
 dayjs.locale('ko');
 
@@ -40,8 +42,15 @@ const ItemDetailPage = () => {
     const [isBidModalVisible, setIsBidModalVisible] = useState(false);  // 입찰 모달
     const [isSuccessfulBidModalVisible, setIsSuccessfullBidModalVisible] = useState(false);  // 낙찰 모달
     const [bidPrice, setBidPrice] = useState(0);
+    const remainingText = useRemainingTime(item?.endTime);
 
     const { token } = useContext(AuthContext);
+
+    const toastOptions = {
+        position: 'bottom',
+        bottomOffset: 120,
+        visibilityTime: 2000,
+    };
 
     const openModal = () => setIsModalVisible(true);
     const closeModal = () => setIsModalVisible(false);
@@ -119,6 +128,7 @@ const ItemDetailPage = () => {
             if(res.data.result === "success") {
                 // 조회 성공
                 setItem(res.data.item);
+                console.log(res.data.item.endTime);
                 // 수정 권한 처리
                 setIsAuthority(res.data.authority);
                 // 찜 아이콘 처리
@@ -147,11 +157,9 @@ const ItemDetailPage = () => {
         try {
             if (!token) {
                 Toast.show({
+                    ...toastOptions,
                     type: 'error',
                     text1: '로그인이 필요합니다.',
-                    position: 'bottom',
-                    bottomOffset: 120, // ✅ default보다 위쪽으로 (조절 가능)
-                    visibilityTime: 2000,
                 });
                 return;
             }
@@ -185,37 +193,42 @@ const ItemDetailPage = () => {
             const parsed = parseInt(bidPrice);
             if (isNaN(parsed)) {
                 Toast.show({
+                    ...toastOptions,
                     type: 'error',
                     text1: '숫자를 입력해주세요.',
-                    position: 'bottom',
-                    bottomOffset: 120, // ✅ default보다 위쪽으로 (조절 가능)
-                    visibilityTime: 2000,
                 });
                 return;
             }
 
             if ((item.currentPrice > 0 && parsed <= item.currentPrice) || item.currentPrice === 0 && parsed < item.startPrice) {
                 Toast.show({
+                    ...toastOptions,
                     type: 'error',
                     text1: item.currentPrice === 0 ? '입찰가는 시작가보다 높아야 합니다.' : '입찰가는 현재가보다 높아야 합니다.',
-                    position: 'bottom',
-                    bottomOffset: 120, // ✅ default보다 위쪽으로 (조절 가능)
-                    visibilityTime: 2000,
                 });
                 return;
             }
 
             if (parsed % 100 !== 0) {
                 Toast.show({
+                    ...toastOptions,
                     type: 'error',
                     text1: '입찰가에 10원단위는 입력할 수 없습니다.',
-                    position: 'bottom',
-                    bottomOffset: 120, // ✅ default보다 위쪽으로 (조절 가능)
-                    visibilityTime: 2000,
                 });
                 return;
             }
             price = parsed;
+            if (item.buyNowPrice && parsed > item.buyNowPrice) {
+                Toast.show({
+                    ...toastOptions,
+                    type: 'error',
+                    text1: '즉시 구매가를 초과할 수 없습니다.',
+                });
+                const fixedPrice = item.buyNowPrice;
+                setBidPrice(item.buyNowPrice.toString()); // 문자열로 넣어줘야 TextInput에 반영됨
+                price = fixedPrice;
+                return;
+            }
         }
 
         // ✅ 여기서 입찰 API 호출
@@ -224,40 +237,65 @@ const ItemDetailPage = () => {
 
     // 입찰 처리
     const submitBid = async (price) => {
+        // console.log(price);
         try {
             if (!token) {
                 Toast.show({
+                    ...toastOptions,
                     type: 'error',
                     text1: '로그인이 필요합니다.',
-                    position: 'bottom',
-                    bottomOffset: 120, // ✅ default보다 위쪽으로 (조절 가능)
-                    visibilityTime: 2000,
                 });
                 return;
             }
-            const res = await axios.post(`${apiUrl}/api/bid/create`,
-                {
-                    itemId: itemId,
-                    bidPrice: price,
-                },
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                        'Content-Type': 'application/json'
+
+            // 즉시 구매가가 있고, 즉시구매가과 입찰한 금액이 같으면 바로 낙찰 처리해주기기
+            if(item?.buyNowPrice && item.buyNowPrice === price) {
+                const res = await axios.post(`${apiUrl}/api/bid/successBid`,
+                    {
+                        itemId: itemId,
+                        buyNowPrice: item.buyNowPrice,
+                        isInstant: true,
+                    },
+                    {
+                        headers: {
+                            Authorization: `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        }
                     }
+                );
+                if(res.data.result === "success") {
+                    Toast.show({
+                        ...toastOptions,
+                        type: 'success',
+                        text1: '본 물품에 낙찰되었습니다. \n경매자와 채팅을 통해 거래약속을 잡으세요.',
+                    });
+                    setItem(res.data.item);
+                    closeBidModal();
+                    setBidPrice(0);
                 }
-            );
-            if(res.data.result === "success") {
-                Toast.show({
-                    type: 'success',
-                    text1: '입찰이 완료되었습니다!',
-                    position: 'bottom',
-                    bottomOffset: 120, // ✅ default보다 위쪽으로 (조절 가능)
-                    visibilityTime: 2000,
-                });
-                setItem(res.data.item);
-                closeBidModal();
-                setBidPrice(0);
+            }else {
+                const res = await axios.post(`${apiUrl}/api/bid/create`,
+                    {
+                        itemId: itemId,
+                        bidPrice: price,
+                    },
+                    {
+                        headers: {
+                            Authorization: `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        }
+                    }
+                );
+                if(res.data.result === "success") {
+                    Toast.show({
+                        ...toastOptions,
+                        type: 'success',
+                        text1: '입찰이 완료되었습니다!',
+                    });
+                    setItem(res.data.item);
+                    closeBidModal();
+                    setBidPrice(0);
+                }
             }
         }catch (error) {
             // console.log("errorResponse : ", error.response.data);
@@ -265,28 +303,21 @@ const ItemDetailPage = () => {
             setBidPrice(0);
             const errorCode = error.response?.data?.errorCode;
 
-            const toastOptions = {
-                type: 'error',
-                position: 'bottom',
-                bottomOffset: 120,
-                visibilityTime: 2000,
-            };
-            
             switch (errorCode) {
                 case 4001:
-                    Toast.show({ ...toastOptions, text1: '유저 정보가 유효하지 않습니다.' });
+                    Toast.show({ ...toastOptions, type: 'error', text1: '유저 정보가 유효하지 않습니다.' });
                     break;
                 case 4002:
-                    Toast.show({ ...toastOptions, text1: '상품 정보가 잘못되었습니다.' });
+                    Toast.show({ ...toastOptions, type: 'error', text1: '상품 정보가 잘못되었습니다.' });
                     break;
                 case 4003:
-                    Toast.show({ ...toastOptions, text1: '입찰 금액을 입력해주세요.' });
+                    Toast.show({ ...toastOptions, type: 'error', text1: '입찰 금액을 입력해주세요.' });
                     break;
                 case 4004:
-                    Toast.show({ ...toastOptions, text1: '마지막 입찰자입니다.' });
+                    Toast.show({ ...toastOptions, type: 'error', text1: '마지막 입찰자입니다.' });
                     break;
                 default:
-                    Toast.show({ ...toastOptions, text1: '입찰에 실패했습니다.' });
+                    Toast.show({ ...toastOptions, type: 'error', text1: '입찰에 실패했습니다.' });
                     break;
             }
         }
@@ -294,14 +325,26 @@ const ItemDetailPage = () => {
 
     // 입찰 모달 열기
     const openBidModal = () => {
+        
+        switch (item.state) {
+            case 0:
+                Toast.show({ ...toastOptions, type: 'error', text1: '경매 시작전 상품 입니다.' });
+                return;
+            case 2:
+                Toast.show({ ...toastOptions, type: 'error', text1: '낙찰이 완료된 상품 입니다.' });
+                return;
+            case 3:
+                Toast.show({ ...toastOptions, type: 'error', text1: '판매가 완료된 상품 입니다.' });
+                return;
+            default:
+                break;
+        }
         // 로그인 유저와 이 경매 물품을 올린 유저아이디가 같은지 확인해보기
         if(isAuthority === true) {
             Toast.show({
+                ...toastOptions,
                 type: 'error',
                 text1: '내 경매 물품에는 입찰할 수 없습니다.',
-                position: 'bottom',
-                bottomOffset: 120, // ✅ default보다 위쪽으로 (조절 가능)
-                visibilityTime: 2000,
             });
             return;
         }
@@ -309,11 +352,29 @@ const ItemDetailPage = () => {
     };
     
     // 입찰 모달 닫기
-    const closeBidModal = () => setIsBidModalVisible(false);
+    const closeBidModal = () => {
+        setIsBidModalVisible(false);
+        setBidPrice(0);
+    };
 
     // 낙찰 모달 열기
-    const openSuccessfullBidModal = () => setIsSuccessfullBidModalVisible(true);
-
+    const openSuccessfullBidModal = () => {
+        switch (item.state) {
+            case 0:
+                Toast.show({ ...toastOptions, type: 'error', text1: '경매 시작전 상품 입니다.' });
+                return;
+            case 2:
+                Toast.show({ ...toastOptions, type: 'error', text1: '낙찰이 완료된 상품 입니다.' });
+                return;
+            case 3:
+                Toast.show({ ...toastOptions, type: 'error', text1: '판매가 완료된 상품 입니다.' });
+                return;
+            default:
+                break;
+        }
+        
+        setIsSuccessfullBidModalVisible(true);
+    }
     // 낙찰 모달 닫기
     const closeSuccessfullBidModal = () => setIsSuccessfullBidModalVisible(false);
     
@@ -322,11 +383,9 @@ const ItemDetailPage = () => {
         try {
             if (!token) {
                 Toast.show({
+                    ...toastOptions,
                     type: 'error',
                     text1: '로그인이 필요합니다.',
-                    position: 'bottom',
-                    bottomOffset: 120, // ✅ default보다 위쪽으로 (조절 가능)
-                    visibilityTime: 2000,
                 });
                 return;
             }
@@ -345,60 +404,51 @@ const ItemDetailPage = () => {
                 }
             );
 
-            console.log(res);
+            // console.log(res);
             if(res.data.result === "success") {
                 Toast.show({
+                    ...toastOptions,
                     type: 'success',
                     text1: '본 물품에 낙찰되었습니다. \n경매자와 채팅을 통해 거래약속을 잡으세요.',
-                    position: 'bottom',
-                    bottomOffset: 120, // ✅ default보다 위쪽으로 (조절 가능)
-                    visibilityTime: 2000,
                 });
                 setItem(res.data.item);
                 closeSuccessfullBidModal();
             }
         }catch (error) {
-            console.log(error);
+            // console.log(error);
             closeSuccessfullBidModal();
             const errorCode = error.response?.data?.errorCode;
 
-            const toastOptions = {
-                type: 'error',
-                position: 'bottom',
-                bottomOffset: 120,
-                visibilityTime: 2000,
-            };
-            
             switch (errorCode) {
                 case 4001:
-                    Toast.show({ ...toastOptions, text1: '유저 정보가 유효하지 않습니다.' });
+                    Toast.show({ ...toastOptions, type: 'error', text1: '유저 정보가 유효하지 않습니다.' });
                     break;
                 case 4002:
-                    Toast.show({ ...toastOptions, text1: '상품 정보가 잘못되었습니다.' });
+                    Toast.show({ ...toastOptions, type: 'error', text1: '상품 정보가 잘못되었습니다.' });
                     break;
                 case 4006:
-                    Toast.show({ ...toastOptions, text1: '낙찰 타입이 유효하지 않습니다.' });
+                    Toast.show({ ...toastOptions, type: 'error', text1: '낙찰 타입이 유효하지 않습니다.' });
                     break;
                 case 4007:
-                    Toast.show({ ...toastOptions, text1: '즉시 구매가가 유효하지 않습니다.' });
+                    Toast.show({ ...toastOptions, type: 'error', text1: '즉시 구매가가 유효하지 않습니다.' });
                     break;
                 case 4009:
-                    Toast.show({ ...toastOptions, text1: '경매 물품이 존재하지 않거나 삭제되었습니다.' });
+                    Toast.show({ ...toastOptions, type: 'error', text1: '경매 물품이 존재하지 않거나 삭제되었습니다.' });
                     break;
                 case 4010:
-                    Toast.show({ ...toastOptions, text1: '경매중인 물품이 아닙니다.' });
+                    Toast.show({ ...toastOptions, type: 'error', text1: '경매중인 물품이 아닙니다.' });
                     break;
                 case 4011:
-                    Toast.show({ ...toastOptions, text1: '이미 낙찰된 경매 물품 입니다.' });
+                    Toast.show({ ...toastOptions, type: 'error', text1: '이미 낙찰된 경매 물품 입니다.' });
                     break;
                 case 4012:
-                    Toast.show({ ...toastOptions, text1: '이미 마감된 경매 물품 입니다.' });
+                    Toast.show({ ...toastOptions, type: 'error', text1: '이미 마감된 경매 물품 입니다.' });
                     break;
                 case 4013:
-                    Toast.show({ ...toastOptions, text1: '설정된 즉시 구매가와 일치하지 않습니다.' });
+                    Toast.show({ ...toastOptions, type: 'error', text1: '설정된 즉시 구매가와 일치하지 않습니다.' });
                     break;
                 default:
-                    Toast.show({ ...toastOptions, text1: '낙찰에에 실패했습니다.' });
+                    Toast.show({ ...toastOptions, type: 'error', text1: '낙찰에에 실패했습니다.' });
                     break;
             }
         }
@@ -451,7 +501,7 @@ const ItemDetailPage = () => {
                                                 style={styles.gavel}
                                                 resizeMode="contain"
                                             />
-                                            <Text style={styles.overlayText}>낙찰완료!</Text>
+                                            <Text style={styles.overlayText}>낙찰완료</Text>
                                         </View>
                                     )}
                                 </TouchableOpacity>
@@ -497,13 +547,35 @@ const ItemDetailPage = () => {
                         ]}
                     >
                     </View>
-                    {item?._count?.bids > 0 && (
-                        <View style={styles.bidNoticeBox}>
-                            <AppText style={styles.bidNoticeText}>
-                                {item._count.bids}명 입찰 중!
-                            </AppText>
-                        </View>
-                    )}
+                    <View style={styles.bidNoticeSection}>
+                        {item?.state === 1 && (
+                            <View style={styles.bidNoticeBox}>
+                                <View style={styles.bidNoticeRow}>
+                                    {item?._count?.bids > 0 && (
+                                        <AppText style={styles.bidNoticeText}>
+                                            {item?._count?.bids}명 입찰 중!
+                                        </AppText>
+                                    )}
+                                    <AppText style={styles.rightText}>
+                                        {/* {getRemainingTimeText(item?.endTime)}  */}
+                                        마감까지 {remainingText} 
+                                    </AppText>
+                                </View>
+                            </View>
+                        )}
+
+                        {item?.state === 2 && (
+                            <View style={styles.bidNoticeBox}>
+                                <AppText style={[
+                                    styles.bidNoticeText,
+                                    { color: "red" }
+                                ]}>
+                                    낙찰된 상품입니다.
+                                </AppText>
+                            </View>
+                        )}
+                    </View>
+
                     <View style={styles.priceContainer}>
                         <View style={styles.priceBox}>
                             <AppText style={styles.priceLabel}>경매 시작가</AppText>
@@ -512,7 +584,16 @@ const ItemDetailPage = () => {
                             </AppText>
                         </View>
                         <View style={styles.priceBox}>
-                            <AppText style={styles.priceLabel}>현재 입찰가</AppText>
+                            <AppText style={styles.priceLabel}>
+                                <AppText style={styles.priceLabel}>
+                                    {{
+                                        0: '경매 대기 중',
+                                        1: '현재 입찰가',
+                                        2: '낙찰가',
+                                        3: '경매 완료',
+                                    }[item?.state] ?? ''}
+                                </AppText>
+                            </AppText>
                             {item?.currentPrice > 0 ? (
                                 <>
                                     <AppText style={styles.priceValue}>
@@ -545,12 +626,12 @@ const ItemDetailPage = () => {
                 </TouchableOpacity>
                 {item?.buyNowPrice ? (
                     <View style={styles.bidBtnArea}>
-                        <TouchableOpacity style={[styles.bidBtn, item.state === 2 && styles.disabledBtn]} onPress={openBidModal} disabled={item.state === 2}>
+                        <TouchableOpacity style={[styles.bidBtn, item.state !== 1 && styles.disabledBtn]} onPress={openBidModal}>
                             <Text style={styles.bidText}>입찰하기</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity style={[styles.bidBtn, { marginLeft: 20, backgroundColor: '#FAFAD2' }]} onPress={openSuccessfullBidModal}>
+                        <TouchableOpacity style={[styles.bidBtn, { marginLeft: 20, backgroundColor: '#FAFAD2' }, item.state !== 1 && styles.disabledBtn]} onPress={openSuccessfullBidModal} >
                             <Text style={[styles.bidText, { color: '#333333'}]}>즉시 낙찰받기</Text>
-                            <Text style={{ fontSize: 12, color: 'gray' }}>즉시구매가({item?.buyNowPrice.toLocaleString()}) </Text>
+                            <Text style={{ fontSize: 12, color: 'gray' }}>즉시구매가({item?.buyNowPrice.toLocaleString()}원) </Text>
                         </TouchableOpacity>
                     </View>
                 ) : (
@@ -603,7 +684,7 @@ const ItemDetailPage = () => {
                                 <TextInput
                                     style={styles.input}
                                     keyboardType="numeric"
-                                    value={bidPrice}
+                                    value={Number(bidPrice).toLocaleString()}
                                     onChangeText={setBidPrice}
                                     placeholder="100원 단위까지 입력"
                                 />
@@ -817,6 +898,8 @@ const styles = StyleSheet.create({
         marginBottom: 12,
         bottom: -50,
     },
+    bidNoticeSection: {
+    },
     bidNoticeBox: {
         paddingHorizontal: 16,
         paddingBottom: 5,
@@ -825,6 +908,16 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: '500',
         color: '#6495ED',
+    },
+    bidNoticeRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    rightText: {
+        fontSize: 14,
+        color: '#666', // 원하면 다른 색상
+        fontWeight: '400',
     },
     priceContainer: {
         flexDirection: 'row',

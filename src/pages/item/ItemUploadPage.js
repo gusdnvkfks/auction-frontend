@@ -58,6 +58,12 @@ const ItemUploadPage = ({ navigation }) => {
 
     const [pickerType, setPickerType] = useState("");
 
+    const toastOptions = {
+        position: 'bottom',
+        bottomOffset: 120,
+        visibilityTime: 2000,
+    };
+
     const requestImagePermission = async () => {
         if(Platform.OS === 'android' && Platform.Version >= 33) {
             const granted = await PermissionsAndroid.request(
@@ -194,7 +200,12 @@ const ItemUploadPage = ({ navigation }) => {
             // console.log(res);
             if(res.data.result === "success") {
                 // 성공
-                Alert.alert("경매물품 등록이 완료되었습니다.");
+                // Alert.alert("경매물품 등록이 완료되었습니다.");
+                Toast.show({
+                    ...toastOptions,
+                    type: 'success',
+                    text1: '본 물품에 낙찰되었습니다. \n경매자와 채팅을 통해 거래약속을 잡으세요.',
+                });
                 navigation.replace("Main");
             }else {
                 // console.log(res);

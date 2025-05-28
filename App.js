@@ -40,8 +40,7 @@ const toastConfig = {
         <BaseToast
             {...props}
             style={{
-                backgroundColor: '#e6f4ea',     // 연한 초록
-                borderLeftColor: '#34a853',     // 초록 강조선
+                backgroundColor: '#d3d3d3',     // 연한 초록
                 borderLeftWidth: 4,
                 borderRadius: 8,
             }}
@@ -61,8 +60,7 @@ const toastConfig = {
         <BaseToast
             {...props}
             style={{
-                backgroundColor: '#fce8e6',     // 연한 빨강
-                borderLeftColor: '#d93025',     // 빨강 강조선
+                backgroundColor: '#d3d3d3',
                 borderLeftWidth: 4,
                 borderRadius: 8,
             }}
