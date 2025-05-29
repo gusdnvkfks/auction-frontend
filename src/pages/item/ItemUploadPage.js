@@ -23,6 +23,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import DateTimeModal from '../../components/DateTimeModal';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import RNFS from 'react-native-fs';
+import Toast from 'react-native-toast-message';
 
 const STATUS_BAR_HEIGHT = Platform.OS === 'android'
     ? StatusBar.currentHeight
@@ -197,14 +198,14 @@ const ItemUploadPage = ({ navigation }) => {
                     'Authorization': `Bearer ${accessToken}`
                 }
             });
-            // console.log(res);
+            console.log(res);
             if(res.data.result === "success") {
                 // 성공
                 // Alert.alert("경매물품 등록이 완료되었습니다.");
                 Toast.show({
                     ...toastOptions,
                     type: 'success',
-                    text1: '본 물품에 낙찰되었습니다. \n경매자와 채팅을 통해 거래약속을 잡으세요.',
+                    text1: '경매물품 등록이 완료되었습니다.',
                 });
                 navigation.replace("Main");
             }else {

@@ -316,6 +316,9 @@ const ItemDetailPage = () => {
                 case 4004:
                     Toast.show({ ...toastOptions, type: 'error', text1: '마지막 입찰자입니다.' });
                     break;
+                case 4015:
+                    Toast.show({ ...toastOptions, type: 'error', text1: '입찰 가능한 상품이 아닙니다.' });
+                    break;
                 default:
                     Toast.show({ ...toastOptions, type: 'error', text1: '입찰에 실패했습니다.' });
                     break;
