@@ -15,6 +15,8 @@ import HeaderLayout from './src/components/HeaderLayout';  // 공통 헤더
 import SplashPage from './src/pages/common/SplashPage';
 import LandingPage from './src/pages/common/LandingPage';
 import LocationPage from './src/pages/common/LocationPage';
+import ReportReasonPage from './src/pages/common/ReportReasonPage';
+import ReportConfirmPage from './src/pages/common/ReportConfirmPage';
 // auth page
 import LoginPage from './src/pages/auth/LoginPage';
 import VerifyPage from './src/pages/auth/VerifyPage';
@@ -97,6 +99,8 @@ export default function App() {
                                 <Stack.Screen name="Landing" component={LandingPage} options={{ headerShown: false }} />
                                 <Stack.Screen name="Login" component={LoginPage} />
                                 <Stack.Screen name="Location" component={LocationPage} />
+                                <Stack.Screen name="Report" component={ReportReasonPage} options={{ headerShown: false }} />
+                                <Stack.Screen name="ReportConfirm" component={ReportConfirmPage} options={{ headerShown: false }} />
                                 <Stack.Screen name="Verify" component={VerifyPage} />
                                 <Stack.Screen name="TermsOfUse" component={TermsOfUsePage} />
                                 {/* <Stack.Screen name="Home" component={HomePage} options={{ headerShown: false }} /> */}

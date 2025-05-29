@@ -457,6 +457,15 @@ const ItemDetailPage = () => {
         }
     }
 
+    const itemReport = () => {
+        setIsModalVisible(false);
+
+        navigation.navigate("Report", {
+            itemId: item.id,
+            targetType: "item",
+        });
+    }
+
     return (
         <View style={styles.container}>
             <View style={[styles.header, scrollY > 250 && styles.headerScrolled]}>
@@ -658,11 +667,8 @@ const ItemDetailPage = () => {
             <BottomActionModal
                 visible={isModalVisible}
                 onClose={() => setIsModalVisible(false)}
-                actions={[
-                    { label: '신고', color: 'red', onPress: () => console.log('신고') },
-                    { label: '이 사용자 글 안 보기', onPress: () => console.log('숨기기') },
-                    { label: '닫기', color: 'gray' },
-                ]}
+                onReport={itemReport} // ✅ 이걸 꼭 추가!
+                onHideUser={() => console.log('숨기기')}
             />
 
             {/* 입찰 모달 */}
