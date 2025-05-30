@@ -1,6 +1,6 @@
 // src/pages/main/HomePage.js
 
-import React, { useState, useEffect } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
 import { Text, StyleSheet, View, Alert, FlatList, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
 import AuctionItem from '../../components/AuctionItem';
 import Icon from 'react-native-vector-icons/FontAwesome';
@@ -11,6 +11,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import Config from 'react-native-config';
 import AppText from '../../components/AppText';
+import { AuthContext } from '../../contexts/AuthContext';
 
 const HomePage = () => {
     // API URL
@@ -24,8 +25,9 @@ const HomePage = () => {
     const [loading, setLoading] = useState(false);
     const [hasMore, setHasMore] = useState(true);
     const [cursor, setCursor] = useState(null);
-    
 
+    const { token } = useContext(AuthContext);
+    
     useEffect(() => {
         getItemList();
     }, [page]);
@@ -53,6 +55,7 @@ const HomePage = () => {
         // 로딩 true로 세팅하기기
         setLoading(true);
         try {
+            
             const res = await axios.get(`${apiUrl}/api/item`, {
                 params: { 
                     page,
@@ -60,7 +63,8 @@ const HomePage = () => {
                     ...(cursor ? { cursor } : {}),
                 },
                 headers: {
-                    'Content-Type': 'application/json'
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json',
                 }
             },);
 

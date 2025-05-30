@@ -457,13 +457,19 @@ const ItemDetailPage = () => {
         }
     }
 
+    // 신고하기
     const itemReport = () => {
         setIsModalVisible(false);
 
         navigation.navigate("Report", {
-            itemId: item.id,
-            targetType: "item",
+            targetId: item.id,
+            targetType: "ITEM",
         });
+    }
+
+    // 유저 차단하기
+    const hideUser = async () => {
+        
     }
 
     return (
@@ -668,7 +674,7 @@ const ItemDetailPage = () => {
                 visible={isModalVisible}
                 onClose={() => setIsModalVisible(false)}
                 onReport={itemReport} // ✅ 이걸 꼭 추가!
-                onHideUser={() => console.log('숨기기')}
+                onHideUser={hideUser}
             />
 
             {/* 입찰 모달 */}

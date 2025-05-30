@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useContext, useState } from 'react';
 import {
     View,
     Text,
@@ -14,6 +14,7 @@ import SafeTopWrapper from '../../components/SafeTopWrapper';
 import Icon from 'react-native-vector-icons/FontAwesome'
 import Config from 'react-native-config';
 import axios from 'axios';
+import { AuthContext } from '../../contexts/AuthContext';
 
 const ReportConfirmPage = () => {
     const navigation = useNavigation();
@@ -25,6 +26,8 @@ const ReportConfirmPage = () => {
     const [content, setContent] = useState('');
     const [hideUserPosts, setHideUserPosts] = useState(false);
 
+    const { token } = useContext(AuthContext);
+    
     const handleSubmit = async () => {
         // 여기서 신고 API 요청 보내면 됨
         try {
@@ -33,31 +36,50 @@ const ReportConfirmPage = () => {
                     reason: reason,
                     targetId: targetId,
                     targetType: targetType,
+                    hideUserPosts: hideUserPosts,
+                    content: content,
                 },
                 {
                     headers: {
-                        headers: {
-                            Authorization: `Bearer ${token}`,
-                        }
+                        Authorization: `Bearer ${token}`,
                     }
                 }
             );
 
-            console.log(res);
+            if(res.data.result === "success") {
+                Toast.show({
+                    type: 'success',
+                    text1: '신고가 접수되었습니다.',
+                    text2: hideUserPosts ? '이 사용자의 게시글은 더 이상 보이지 않습니다.' : undefined,
+                    position: 'bottom',
+                    bottomOffset: 120,
+                    visibilityTime: 2000,
+                });
+
+                navigation.reset({
+                    index: 1,
+                    routes: [
+                        { 
+                            name: 'Main' 
+                        },
+                        {
+                            name: 'ItemDetail',
+                            params: { itemId: res.data.targetId },
+                        },
+                    ],
+                });
+            }
+
         }catch(error) {
-
+            console.log(error);
+            Toast.show({
+                type: 'error',
+                text1: error.response?.data.message,
+                position: 'bottom',
+                bottomOffset: 120,
+                visibilityTime: 2000,
+            });
         }
-
-        // Toast.show({
-        //     type: 'success',
-        //     text1: '신고가 접수되었습니다.',
-        //     text2: hideUserPosts ? '이 사용자의 게시글은 더 이상 보이지 않습니다.' : undefined,
-        //     position: 'bottom',
-        //     bottomOffset: 120,
-        //     visibilityTime: 2000,
-        // });
-
-        // navigation.goBack();
     };
 
     return (

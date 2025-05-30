@@ -16,6 +16,7 @@ const ReportReasonPage = ({ route }) => {
     const { targetId, targetType } = route.params;
 
     const handleSelectReason = (reason) => {
+        console.log(targetType);
         navigation.navigate('ReportConfirm', {
             reason,
             targetId,
