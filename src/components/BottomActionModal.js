@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const BottomActionModal = ({ visible, onClose, onReport, onHideUser }) => {
+const BottomActionModal = ({ visible, isAuthority, onClose, userActions, itemActions, itemState }) => {
     const insets = useSafeAreaInsets();
 
     return (
@@ -20,18 +20,43 @@ const BottomActionModal = ({ visible, onClose, onReport, onHideUser }) => {
 
                 {/* 실제 모달 내용 */}
                 <View style={[styles.container, { paddingBottom: insets.bottom || 16 }]}>
-                {/* <TouchableOpacity onPress={onReport}> */}
-                <TouchableOpacity onPress={onReport}>
-                    <Text style={[styles.item, { color: 'red' }]}>신고</Text>
-                </TouchableOpacity>
+                    {isAuthority === true ? (
+                        <>
+                            {itemState !== 3 ? (
+                                <TouchableOpacity onPress={itemActions.onUpdate}>
+                                    <Text style={styles.item}>
+                                        {itemState === 0 ? "경매하기" : itemState === 1 ? "낙찰하기" : "판매완료"}
+                                    </Text>
+                                </TouchableOpacity>
+                            ) : null}
 
-                <TouchableOpacity onPress={onHideUser}>
-                    <Text style={styles.item}>이 사용자의 게시글 보지 않기</Text>
-                </TouchableOpacity>
+                            <TouchableOpacity onPress={itemActions.onModify}>
+                                <Text style={styles.item}>경매 물품 수정</Text>
+                            </TouchableOpacity>
 
-                <TouchableOpacity onPress={onClose}>
-                    <Text style={[styles.item, { color: 'gray' }]}>닫기</Text>
-                </TouchableOpacity>
+                            <TouchableOpacity onPress={itemActions.onDelete}>
+                                <Text style={[styles.item, { color: 'red' }]}>삭제</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity onPress={onClose}>
+                                <Text style={[styles.item, { color: 'gray' }]}>닫기</Text>
+                            </TouchableOpacity>
+                        </>
+                    ) : (
+                        <>
+                            <TouchableOpacity onPress={userActions.onReport}>
+                                <Text style={[styles.item, { color: 'red' }]}>신고</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity onPress={userActions.onHideUser}>
+                                <Text style={styles.item}>이 사용자의 게시글 보지 않기</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity onPress={onClose}>
+                                <Text style={[styles.item, { color: 'gray' }]}>닫기</Text>
+                            </TouchableOpacity>
+                        </>
+                    )}
                 </View>
             </View>
         </Modal>

@@ -1,16 +1,50 @@
+import { useEffect, useState, useContext } from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import SafeTopWrapper from '../../components/SafeTopWrapper';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useNavigation } from '@react-navigation/native';
+
+import axios from 'axios';
+import Config from 'react-native-config';
+import { AuthContext } from '../../contexts/AuthContext';
 
 const MyPage = () => {
+    const apiUrl = Config.API_URL;
+    const navigation = useNavigation();
+    const { token } = useContext(AuthContext);
+    const [myInfo, setMyInfo] = useState(null);
+
+    useEffect(() => {
+        // 토큰으로 내 정보 가져오기
+        getMyInfo();
+    }, []);
+
+    const getMyInfo = async () => {
+        try {
+            const res = await axios(`${apiUrl}/api/user`,
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        "Content-Type": "application/json"
+                    }
+                }
+            );
+            if(res.data.result === "success") {
+                setMyInfo(res.data.user);
+            }
+        }catch (error) {
+            console.log("error : ", error);
+        }
+    }
+    
     return (
         <SafeTopWrapper>
             <ScrollView style={styles.container}>
                 {/* 프로필 카드 영역 */}
                 <View style={styles.profileCard}>
-                    <Image source={{ uri: 'https://your-cdn.com/profile.jpg' }} style={styles.profileImage} />
+                    <Image source={{ uri: myInfo?.thumbnailImg }} style={styles.profileImage} />
                     <View style={styles.profileTextContainer}>
-                        <Text style={styles.nickname}>닉네임</Text>
+                        <Text style={styles.nickname}>{myInfo?.nickname}</Text>
                         <TouchableOpacity onPress={() => {}} style={styles.editProfileBtn}>
                             <Text style={styles.editProfileText}>프로필 수정</Text>
                         </TouchableOpacity>
@@ -20,7 +54,7 @@ const MyPage = () => {
                 {/* 경매 섹션 */}
                 <View style={styles.sectionCard}>
                     <Text style={styles.sectionTitle}>경매</Text>
-                    <MenuItem label="판매내역" icon="tag-outline" onPress={() => {}} />
+                    <MenuItem label="판매내역" icon="tag-outline" onPress={() => {navigation.navigate('MySalesHistory')}} />
                     <MenuItem label="구매내역" icon="cart-outline" onPress={() => {}} />
                     <MenuItem label="찜한상품" icon="heart-outline" onPress={() => {}} />
                 </View>

@@ -499,6 +499,16 @@ const ItemDetailPage = () => {
         }
     }
 
+    const itemModify = async () => {
+        
+    }
+    const itemUpdate = async () => {
+        
+    }
+    const itemDelete = async () => {
+        
+    }
+
     return (
         <View style={styles.container}>
             <View style={[styles.header, scrollY > 250 && styles.headerScrolled]}>
@@ -699,9 +709,18 @@ const ItemDetailPage = () => {
             {/* 우측 상단 ... 아이콘 누르면 나오는 모달 */}
             <BottomActionModal
                 visible={isModalVisible}
+                isAuthority={isAuthority}
                 onClose={() => setIsModalVisible(false)}
-                onReport={itemReport} // ✅ 이걸 꼭 추가!
-                onHideUser={hideUser}
+                userActions={{
+                    onReport: itemReport,
+                    onHideUser: hideUser,
+                }}
+                itemActions={{
+                    onModify: itemModify,
+                    onUpdate: itemUpdate,
+                    onDelete: itemDelete,
+                }}
+                itemState={item?.state}
             />
 
             {/* 입찰 모달 */}

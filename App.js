@@ -27,7 +27,7 @@ import SearchPage from './src/pages/main/SearchPage';
 import ItemUploadPage from './src/pages/item/ItemUploadPage';
 import ItemDetailPage from './src/pages/item/ItemDetailPage';
 // mypage
-// import MyPage from './src/pages/mypage/Mypage';
+import MySalesHistoryPage from './src/pages/mypage/MySalesHistoryPage';
 
 // NAVIGATORS
 import MainTabNavigator from './src/navigators/MainTabNavigator';
@@ -110,7 +110,7 @@ export default function App() {
                                 <Stack.Screen name="Main" component={MainTabNavigator} options={{ headerShown: false }} />
                                 <Stack.Screen name="ItemUpload" component={ItemUploadPage} options={{ headerShown: false }} />
                                 <Stack.Screen name="ItemDetail" component={ItemDetailPage} options={{ headerShown: false }} />
-                                {/* <Stack.Screen name="MyPage" component={MyPage} options={{ headerShown: false }} /> */}
+                                <Stack.Screen name="MySalesHistory" component={MySalesHistoryPage} options={{ headerShown: false }} />
                                 
                             </Stack.Navigator>
                         </NavigationContainer>
