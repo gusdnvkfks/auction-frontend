@@ -469,7 +469,34 @@ const ItemDetailPage = () => {
 
     // 유저 차단하기
     const hideUser = async () => {
-        
+        try {
+            const res = await axios.post(`${apiUrl}/api/user/block`,
+                {
+                    itemId: itemId,  // 차단할 유저 조회 목적
+                },
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                }
+            )
+            if(res.data.result === "success") {
+                Toast.show({
+                    ...toastOptions,
+                    type: 'success',
+                    text1: '해당 유저의 게시글이 더이상 보이지 않습니다.',
+                });
+                navigation.goBack();
+            }
+        } catch (error) {
+            Toast.show({
+                ...toastOptions,
+                type: 'error',
+                text1: '해당 유저를 차단하는 데 실패했습니다.',
+            });
+            setIsModalVisible(false);
+        }
     }
 
     return (

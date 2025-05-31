@@ -26,7 +26,7 @@ const BottomActionModal = ({ visible, onClose, onReport, onHideUser }) => {
                 </TouchableOpacity>
 
                 <TouchableOpacity onPress={onHideUser}>
-                    <Text style={styles.item}>이 사용자 글 안 보기</Text>
+                    <Text style={styles.item}>이 사용자의 게시글 보지 않기</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity onPress={onClose}>

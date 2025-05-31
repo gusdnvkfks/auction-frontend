@@ -1,11 +1,11 @@
 // src/pages/main/HomePage.js
 
-import React, { useContext, useState, useEffect } from 'react';
+import React, { useContext, useState, useEffect, useCallback } from 'react';
 import { Text, StyleSheet, View, Alert, FlatList, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
 import AuctionItem from '../../components/AuctionItem';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import FloatingButton from '../../components/FloatingButton';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import axios from 'axios';
@@ -32,19 +32,28 @@ const HomePage = () => {
         getItemList();
     }, [page]);
 
-    useEffect(() => {
-        setItems([]);
-        setHasMore(true);
-        setCursor(null);
-        setPage(1);
+    // useEffect(() => {
+    //     setItems([]);
+    //     setHasMore(true);
+    //     setCursor(null);
+    //     setPage(1);
 
-        // 🔥🔥🔥 이거 추가해야 함
-        if(page === 1) {
-            getItemList();
-        }else {
+    //     // 🔥🔥🔥 이거 추가해야 함
+    //     if(page === 1) {
+    //         getItemList();
+    //     }else {
+    //         setPage(1);
+    //     }
+    // }, [searchKeyword]);
+    useFocusEffect(
+        useCallback(() => {
+            setItems([]);
             setPage(1);
-        }
-    }, [searchKeyword]);
+            setCursor(null);
+            setHasMore(true);
+            getItemList();
+        }, [searchKeyword])
+    );
 
     const getItemList = async () => {
         // 더 불러올게 있는 지 확인
