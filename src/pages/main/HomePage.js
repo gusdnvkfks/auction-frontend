@@ -278,7 +278,6 @@ const styles = StyleSheet.create({
         color: '#888',
         fontSize: 18,
     },
-
     spinnerWrapper: {
         position: 'absolute',
         top: 0,

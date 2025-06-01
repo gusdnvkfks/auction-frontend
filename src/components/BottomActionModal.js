@@ -25,7 +25,8 @@ const BottomActionModal = ({ visible, isAuthority, onClose, userActions, itemAct
                             {itemState !== 3 ? (
                                 <TouchableOpacity onPress={itemActions.onUpdate}>
                                     <Text style={styles.item}>
-                                        {itemState === 0 ? "경매하기" : itemState === 1 ? "낙찰하기" : "판매완료"}
+                                        {/* {itemState === 0 ? "경매중" : itemState === 1 ? "낙찰하기" : "판매완료"} */}
+                                        경매 상태 변경
                                     </Text>
                                 </TouchableOpacity>
                             ) : null}

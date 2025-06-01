@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet, ScrollView, Alert, Dimensions, Modal, TextInput } from 'react-native';
+import { View, Text, Image, TouchableOpacity, StyleSheet, ScrollView, Alert, Dimensions, Modal, TextInput, ActivityIndicator } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import MaterialIcon from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -14,7 +14,7 @@ import 'dayjs/locale/ko';
 import FullScreenImageViewer from '../../components/FullScreenImageViewer';
 import BottomActionModal from '../../components/BottomActionModal';
 
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import SafeTopWrapper from '../../components/SafeTopWrapper';
 import Toast from 'react-native-toast-message';
 
 import { AuthContext } from '../../contexts/AuthContext';
@@ -25,8 +25,9 @@ dayjs.extend(relativeTime);
 dayjs.locale('ko');
 
 const ItemDetailPage = () => {
-    const insets = useSafeAreaInsets();
     const apiUrl = Config.API_URL;
+    // 토큰
+    const { token } = useContext(AuthContext);
     
     const navigation = useNavigation();
     const route = useRoute();
@@ -42,9 +43,19 @@ const ItemDetailPage = () => {
     const [isBidModalVisible, setIsBidModalVisible] = useState(false);  // 입찰 모달
     const [isSuccessfulBidModalVisible, setIsSuccessfullBidModalVisible] = useState(false);  // 낙찰 모달
     const [bidPrice, setBidPrice] = useState(0);
-    const remainingText = useRemainingTime(item?.endTime);
 
-    const { token } = useContext(AuthContext);
+    // 로딩 스니퍼
+    const [loading, setLoading] = useState(false);
+    
+    // 상태변경 모달관련련
+    const [stateUpdateModal, setStateUpdateModal] = useState(false);
+    const [stateUpdateMessage, setStateUpdateMessage] = useState("");
+    const [stateUpdateBtnText, setStateUpdateBtnText] = useState("");
+    const [udpateState, setUpdateState] = useState(null);
+
+    
+    // 남은 시간 계산 텍스트
+    const remainingText = useRemainingTime(item?.endTime);
 
     const toastOptions = {
         position: 'bottom',
@@ -98,7 +109,7 @@ const ItemDetailPage = () => {
         }
     }
 
-    // 경매물품 등록 시간 설정정
+    // 경매물품 등록 시간 설정
     const getRelativeTime = (createdAt) => {
         const now = dayjs();
         const created = dayjs(createdAt);
@@ -120,6 +131,7 @@ const ItemDetailPage = () => {
     const getItemDetail = async () => {
         // itemId가 있으면 조회 하기
         try {
+            setLoading(true);
             const res = await axios.get(`${apiUrl}/api/item/${itemId}`, {
                 headers: {
                     Authorization: `Bearer ${token}`,
@@ -149,6 +161,8 @@ const ItemDetailPage = () => {
                 ],
                 { cancelable: false }
             );
+        }finally {
+            setLoading(false);
         }
     }
 
@@ -163,6 +177,7 @@ const ItemDetailPage = () => {
                 });
                 return;
             }
+            setLoading(true);
             await axios.post(`${apiUrl}/api/item/favorite`, 
                 { itemId },  // body
                 {
@@ -175,6 +190,8 @@ const ItemDetailPage = () => {
             setIsFavorite(prev => !prev); // UI만 토글
         }catch (err) {
             Alert.alert("알림", "찜 상태 변경에 실패했습니다.");
+        }finally {
+            setLoading(false);
         }
     }
 
@@ -186,7 +203,7 @@ const ItemDetailPage = () => {
     // 입찰 모달에서 입찰
     const handleSubmitBid = () => {
         let price = 0;
-
+        setLoading(true);
         if(item.isBidUnit === 1) {
             price = item.currentPrice === 0 ? item.startPrice : item.currentPrice + item.bidUnit;
         }else {
@@ -197,6 +214,7 @@ const ItemDetailPage = () => {
                     type: 'error',
                     text1: '숫자를 입력해주세요.',
                 });
+                setLoading(false);
                 return;
             }
 
@@ -206,6 +224,7 @@ const ItemDetailPage = () => {
                     type: 'error',
                     text1: item.currentPrice === 0 ? '입찰가는 시작가보다 높아야 합니다.' : '입찰가는 현재가보다 높아야 합니다.',
                 });
+                setLoading(false);
                 return;
             }
 
@@ -215,6 +234,7 @@ const ItemDetailPage = () => {
                     type: 'error',
                     text1: '입찰가에 10원단위는 입력할 수 없습니다.',
                 });
+                setLoading(false);
                 return;
             }
             price = parsed;
@@ -227,6 +247,7 @@ const ItemDetailPage = () => {
                 const fixedPrice = item.buyNowPrice;
                 setBidPrice(item.buyNowPrice.toString()); // 문자열로 넣어줘야 TextInput에 반영됨
                 price = fixedPrice;
+                setLoading(false);
                 return;
             }
         }
@@ -245,6 +266,7 @@ const ItemDetailPage = () => {
                     type: 'error',
                     text1: '로그인이 필요합니다.',
                 });
+                setLoading(false);
                 return;
             }
 
@@ -323,6 +345,8 @@ const ItemDetailPage = () => {
                     Toast.show({ ...toastOptions, type: 'error', text1: '입찰에 실패했습니다.' });
                     break;
             }
+        }finally {
+            setLoading(false);
         }
     }
 
@@ -393,6 +417,7 @@ const ItemDetailPage = () => {
                 return;
             }
 
+            setLoading(false);
             const res = await axios.post(`${apiUrl}/api/bid/successBid`, 
                 {
                     itemId: itemId,
@@ -454,6 +479,8 @@ const ItemDetailPage = () => {
                     Toast.show({ ...toastOptions, type: 'error', text1: '낙찰에에 실패했습니다.' });
                     break;
             }
+        }finally {
+            setLoading(false);
         }
     }
 
@@ -470,6 +497,7 @@ const ItemDetailPage = () => {
     // 유저 차단하기
     const hideUser = async () => {
         try {
+            setLoading(false);
             const res = await axios.post(`${apiUrl}/api/user/block`,
                 {
                     itemId: itemId,  // 차단할 유저 조회 목적
@@ -496,303 +524,394 @@ const ItemDetailPage = () => {
                 text1: '해당 유저를 차단하는 데 실패했습니다.',
             });
             setIsModalVisible(false);
+        }finally {
+            setLoading(false);
         }
     }
 
+    // 내 경매 물품 상태 업데이트
+    const itemUpdate = async () => {
+        console.log("item state : ", item.state);
+        if(item.state === 0) {
+            // 경매 전, state가 0일때는 경매중으로밖에 못바꿈.
+            setStateUpdateMessage("경매 전 -> 경매 중");
+            setStateUpdateBtnText("경매 시작");
+            setUpdateState(1);
+        }else if(item.state === 1) {
+            // 경매 중, state가 1일때는 경매전, 낙찰완료로 바꿀 수 있다.
+            // 경매전으로 바꿀때는 입찰자가 없으면 그냥 경매전으로 바꾸고,
+            // 입찰자가 있다면 경매 전으로 돌릴 수 없음 -> 삭제 유도
+            if(item._count.bids > 0) {
+                setStateUpdateMessage("경매 중 -> 낙찰완료\n입찰자가 있는 경매는 경매 전으로 되돌릴 수 없습니다.\n경매를 종료하려면 삭제 기능을 이용해 주세요.");
+                setStateUpdateBtnText("경매 낙찰");
+                // 경매 낙찰 버튼 누르면 입찰자 목록으로 가야됨.
+            }else {
+                setStateUpdateMessage("경매 중 -> 경매 전");
+                setStateUpdateBtnText("경매 취소");
+                setUpdateState(0);
+            }
+        }
+        setStateUpdateModal(true);
+    }
+    
+    // 상태 변경
+    const updateItemState = async () => {
+        setLoading(true);
+        try {
+            const res = await axios.patch(`${apiUrl}/api/item/${itemId}/state`,
+                {
+                    state: udpateState,
+                },
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        "Content-Type": "application/json",
+                    }
+                }
+            );
+            console.log("res.data : ", res.data);
+            console.log("res.data.result : ", res.data.result);
+            if(res.data.result === "success") {
+                console.log('상태 업데이트 성공');
+                setStateUpdateModal(false);
+                setIsModalVisible(false);
+                Toast.show({
+                    ...toastOptions,
+                    type: 'success',
+                    text1: '경매 물품의 상태가 변경되었습니다.',
+                });
+                setItem(res.data.item);
+            }
+        }catch (error) {
+            console.log("error : ", error);
+        }finally {
+            setLoading(false);
+        }
+    }
+    // 내 경매 물품 수정
     const itemModify = async () => {
         
     }
-    const itemUpdate = async () => {
-        
-    }
+    // 내 경매 물품 삭제
     const itemDelete = async () => {
         
     }
 
+
     return (
-        <View style={styles.container}>
-            <View style={[styles.header, scrollY > 250 && styles.headerScrolled]}>
-                <TouchableOpacity onPress={() => navigation.goBack()}>
-                    <Icon name="angle-left" size={28} color={scrollY > 250 ? '#333' : '#fff'} />
-                </TouchableOpacity>
-                <TouchableOpacity onPress={openModal} style={{ marginLeft: 'auto' }}>
-                    <MaterialIcon name="more-vert" size={24} color={scrollY > 100 ? '#333' : '#fff'} />
-                </TouchableOpacity>
-            </View>
-            <View style={{ flex: 1 }}>
-                <ScrollView 
-                    style={{ flex: 1 }}
-                    contentContainerStyle={{ 
-                        paddingBottom: 140 + insets.bottom,
-                        minHeight: Dimensions.get('window').height - HEADER_HEIGHT,
-                    }}
-                    onScroll={handleScroll}
-                    scrollEventThrottle={16}
-                >
-                    {/* 이미지 영역 */}
-                    <View style={styles.imageCarouselWrapper}>
-                        <ScrollView
-                            horizontal
-                            pagingEnabled
-                            showsHorizontalScrollIndicator={false}
-                            style={styles.imageCarousel}
-                        >
-                            {item?.images?.map((img, index) => (
-                                <TouchableOpacity key={index} onPress={() => {
-                                    setCurrentIndex(index); // 선택된 이미지 인덱스
-                                    setIsVisible(true);
-                                }}>
-                                    <Image
-                                        key={index}
-                                        source={{ uri: img.url }}
-                                        style={styles.carouselImage}
-                                        resizeMode="cover"
-                                    />
-                                    {/* ✅ 낙찰 완료 오버레이 */}
-                                    {item.state === 2 && (
-                                        <View style={styles.overlay}>
-                                            <Image
-                                                source={require('../../assets/images/logo.png')} // 경매봉 이미지
-                                                style={styles.gavel}
-                                                resizeMode="contain"
-                                            />
-                                            <Text style={styles.overlayText}>낙찰완료</Text>
-                                        </View>
-                                    )}
-                                </TouchableOpacity>
-                            ))}
-                        </ScrollView>
-                    </View>
-
-                    {/* 유저 정보 */}
-                    <View style={styles.userInfo}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                            <Image style={styles.avatar} />
-                            <View>
-                                <AppText style={styles.nickname}>{item?.user?.nickname}</AppText>
-                                <AppText style={styles.location}>{item?.user?.city} {item?.user?.gu} {item?.user?.dong}</AppText>
-                            </View>
-                        </View>
-                        <View style={styles.viewLikeBox}>
-                            <AppText style={styles.viewLikeText}>조회 {item?.viewCount ?? 0} · 찜 {item?._count?.favorites ?? 0}</AppText>
-                        </View>
-                    </View>
-
-                    {/* 제목 + 시간 */}
-                    <View style={styles.titleBox}>
-                        <Text style={styles.title}>{item?.title}</Text>
-                        <Text style={styles.time}>{item ? getRelativeTime(item.createdAt) : ''}</Text>
-                    </View>
-
-                    {/* 내용 */}
-                    <Text style={styles.description}>
-                        {item?.description}
-                    </Text>
-
-                    {/* 거래 희망장소 -> 지금 당장은 없어서 주석 처리 */}
-                    {/* <View style={styles.locationBox}>
-                        <Text style={styles.label}>거래희망장소</Text>
-                        <Text style={styles.place}>주안캐슬앤더샵 에듀포레</Text>
-                    </View> */}
-
-                    <View 
-                        style={[
-                            styles.infoRow,
-                            item?.description?.length < 50 && { paddingTop: screenHeight * 0.08, bottom: -40 } // 설명이 짧으면 최소 높이 줌
-                        ]}
+        <SafeTopWrapper>
+            <View style={styles.container}>
+                <View style={[styles.header, scrollY > 250 && styles.headerScrolled]}>
+                    <TouchableOpacity onPress={() => navigation.goBack()}>
+                        <Icon name="angle-left" size={28} color={scrollY > 250 ? '#333' : '#fff'} />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={openModal} style={{ marginLeft: 'auto' }}>
+                        <MaterialIcon name="more-vert" size={24} color={scrollY > 100 ? '#333' : '#fff'} />
+                    </TouchableOpacity>
+                </View>
+                <View style={{ flex: 1 }}>
+                    <ScrollView 
+                        style={{ flex: 1 }}
+                        contentContainerStyle={{ 
+                            paddingBottom: 140,
+                            minHeight: Dimensions.get('window').height - HEADER_HEIGHT,
+                        }}
+                        onScroll={handleScroll}
+                        scrollEventThrottle={16}
                     >
-                    </View>
-                    <View style={styles.bidNoticeSection}>
-                        {item?.state === 1 && (
-                            <View style={styles.bidNoticeBox}>
-                                <View style={styles.bidNoticeRow}>
-                                    {item?._count?.bids > 0 && (
-                                        <AppText style={styles.bidNoticeText}>
-                                            {item?._count?.bids}명 입찰 중!
-                                        </AppText>
-                                    )}
-                                    <AppText style={styles.rightText}>
-                                        {/* {getRemainingTimeText(item?.endTime)}  */}
-                                        마감까지 {remainingText} 
-                                    </AppText>
+                        {/* 이미지 영역 */}
+                        <View style={styles.imageCarouselWrapper}>
+                            <ScrollView
+                                horizontal
+                                pagingEnabled
+                                showsHorizontalScrollIndicator={false}
+                                style={styles.imageCarousel}
+                            >
+                                {item?.images?.map((img, index) => (
+                                    <TouchableOpacity key={index} onPress={() => {
+                                        setCurrentIndex(index); // 선택된 이미지 인덱스
+                                        setIsVisible(true);
+                                    }}>
+                                        <Image
+                                            key={index}
+                                            source={{ uri: img.url }}
+                                            style={styles.carouselImage}
+                                            resizeMode="cover"
+                                        />
+                                        {/* ✅ 낙찰 완료 오버레이 */}
+                                        {item.state === 2 && (
+                                            <View style={styles.overlay}>
+                                                <Image
+                                                    source={require('../../assets/images/logo.png')} // 경매봉 이미지
+                                                    style={styles.gavel}
+                                                    resizeMode="contain"
+                                                />
+                                                <Text style={styles.overlayText}>낙찰완료</Text>
+                                            </View>
+                                        )}
+                                    </TouchableOpacity>
+                                ))}
+                            </ScrollView>
+                        </View>
+
+                        {/* 유저 정보 */}
+                        <View style={styles.userInfo}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                <Image style={styles.avatar} />
+                                <View>
+                                    <AppText style={styles.nickname}>{item?.user?.nickname}</AppText>
+                                    <AppText style={styles.location}>{item?.user?.city} {item?.user?.gu} {item?.user?.dong}</AppText>
                                 </View>
                             </View>
-                        )}
-
-                        {item?.state === 2 && (
-                            <View style={styles.bidNoticeBox}>
-                                <AppText style={[
-                                    styles.bidNoticeText,
-                                    { color: "red" }
-                                ]}>
-                                    낙찰된 상품입니다.
-                                </AppText>
+                            <View style={styles.viewLikeBox}>
+                                <AppText style={styles.viewLikeText}>조회 {item?.viewCount ?? 0} · 찜 {item?._count?.favorites ?? 0}</AppText>
                             </View>
-                        )}
-                    </View>
-
-                    <View style={styles.priceContainer}>
-                        <View style={styles.priceBox}>
-                            <AppText style={styles.priceLabel}>경매 시작가</AppText>
-                            <AppText style={styles.priceValue}>
-                                {item?.startPrice?.toLocaleString()}원
-                            </AppText>
                         </View>
-                        <View style={styles.priceBox}>
-                            <AppText style={styles.priceLabel}>
-                                <AppText style={styles.priceLabel}>
-                                    {{
-                                        0: '경매 대기 중',
-                                        1: '현재 입찰가',
-                                        2: '낙찰가',
-                                        3: '경매 완료',
-                                    }[item?.state] ?? ''}
-                                </AppText>
-                            </AppText>
-                            {item?.currentPrice > 0 ? (
-                                <>
-                                    <AppText style={styles.priceValue}>
-                                        {item.currentPrice.toLocaleString()}원
-                                        {/* {item?._count?.bids > 0 && ` · ${item._count.bids}명 입찰 중`} */}
+
+                        {/* 제목 + 시간 */}
+                        <View style={styles.titleBox}>
+                            <Text style={styles.title}>{item?.title}</Text>
+                            <Text style={styles.time}>{item ? getRelativeTime(item.createdAt) : ''}</Text>
+                        </View>
+
+                        {/* 내용 */}
+                        <Text style={styles.description}>
+                            {item?.description}
+                        </Text>
+
+                        {/* 거래 희망장소 -> 지금 당장은 없어서 주석 처리 */}
+                        {/* <View style={styles.locationBox}>
+                            <Text style={styles.label}>거래희망장소</Text>
+                            <Text style={styles.place}>주안캐슬앤더샵 에듀포레</Text>
+                        </View> */}
+
+                        <View 
+                            style={[
+                                styles.infoRow,
+                                item?.description?.length < 50 && { paddingTop: screenHeight * 0.08, bottom: -40 } // 설명이 짧으면 최소 높이 줌
+                            ]}
+                        >
+                        </View>
+                        <View style={styles.bidNoticeSection}>
+                            {item?.state === 1 && (
+                                <View style={styles.bidNoticeBox}>
+                                    <View style={styles.bidNoticeRow}>
+                                        {item?._count?.bids > 0 && (
+                                            <AppText style={styles.bidNoticeText}>
+                                                {item?._count?.bids}명 입찰 중!
+                                            </AppText>
+                                        )}
+                                        <AppText style={styles.rightText}>
+                                            {/* {getRemainingTimeText(item?.endTime)}  */}
+                                            마감까지 {remainingText} 
+                                        </AppText>
+                                    </View>
+                                </View>
+                            )}
+
+                            {item?.state === 2 && (
+                                <View style={styles.bidNoticeBox}>
+                                    <AppText style={[
+                                        styles.bidNoticeText,
+                                        { color: "red" }
+                                    ]}>
+                                        낙찰된 상품입니다.
                                     </AppText>
-                                </>
-                            ) : (
-                                <>
-                                    <AppText style={styles.firstBidText}>첫 입찰자가 되어주세요!</AppText>
-                                </>
+                                </View>
                             )}
                         </View>
-                        {item?.isBidUnit === 1 && (
+
+                        <View style={styles.priceContainer}>
                             <View style={styles.priceBox}>
-                                <AppText style={styles.priceLabel}>입찰 단위</AppText>
+                                <AppText style={styles.priceLabel}>경매 시작가</AppText>
                                 <AppText style={styles.priceValue}>
-                                    {item?.bidUnit?.toLocaleString()}원
+                                    {item?.startPrice?.toLocaleString()}원
                                 </AppText>
                             </View>
-                        )}
-                    </View>
-                </ScrollView>
-            </View>
+                            <View style={styles.priceBox}>
+                                <AppText style={styles.priceLabel}>
+                                    <AppText style={styles.priceLabel}>
+                                        {{
+                                            0: '경매 대기 중',
+                                            1: '현재 입찰가',
+                                            2: '낙찰가',
+                                            3: '경매 완료',
+                                        }[item?.state] ?? ''}
+                                    </AppText>
+                                </AppText>
+                                {item?.currentPrice > 0 ? (
+                                    <>
+                                        <AppText style={styles.priceValue}>
+                                            {item.currentPrice.toLocaleString()}원
+                                            {/* {item?._count?.bids > 0 && ` · ${item._count.bids}명 입찰 중`} */}
+                                        </AppText>
+                                    </>
+                                ) : (
+                                    <>
+                                        <AppText style={styles.firstBidText}>첫 입찰자가 되어주세요!</AppText>
+                                    </>
+                                )}
+                            </View>
+                            {item?.isBidUnit === 1 && (
+                                <View style={styles.priceBox}>
+                                    <AppText style={styles.priceLabel}>입찰 단위</AppText>
+                                    <AppText style={styles.priceValue}>
+                                        {item?.bidUnit?.toLocaleString()}원
+                                    </AppText>
+                                </View>
+                            )}
+                        </View>
+                    </ScrollView>
+                </View>
 
-            {/* 하단 버튼 */}
-            <View style={[styles.bottomBar, { paddingBottom: 64 + insets.bottom }]}>
-                <TouchableOpacity style={styles.likeBtn} onPress={changeFavoriteItem}>
-                    <Icon name={isFavorite ? 'heart' : 'heart-o'} size={24} color="#F05650" />
-                </TouchableOpacity>
-                {item?.buyNowPrice ? (
-                    <View style={styles.bidBtnArea}>
-                        <TouchableOpacity style={[styles.bidBtn, item.state !== 1 && styles.disabledBtn]} onPress={openBidModal}>
-                            <Text style={styles.bidText}>입찰하기</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={[styles.bidBtn, { marginLeft: 20, backgroundColor: '#FAFAD2' }, item.state !== 1 && styles.disabledBtn]} onPress={openSuccessfullBidModal} >
-                            <Text style={[styles.bidText, { color: '#333333'}]}>즉시 낙찰받기</Text>
-                            <Text style={{ fontSize: 12, color: 'gray' }}>즉시구매가({item?.buyNowPrice.toLocaleString()}원) </Text>
-                        </TouchableOpacity>
+                {/* 하단 버튼 */}
+                <View style={[styles.bottomBar, { paddingBottom: 36 }]}>
+                    <TouchableOpacity style={styles.likeBtn} onPress={changeFavoriteItem}>
+                        <Icon name={isFavorite ? 'heart' : 'heart-o'} size={24} color="#F05650" />
+                    </TouchableOpacity>
+                    {item?.buyNowPrice ? (
+                        <View style={styles.bidBtnArea}>
+                            <TouchableOpacity style={[styles.bidBtn, item.state !== 1 && styles.disabledBtn]} onPress={openBidModal}>
+                                <Text style={styles.bidText}>입찰하기</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={[styles.bidBtn, { marginLeft: 20, backgroundColor: '#FAFAD2' }, item.state !== 1 && styles.disabledBtn]} onPress={openSuccessfullBidModal} >
+                                <Text style={[styles.bidText, { color: '#333333'}]}>즉시 낙찰받기</Text>
+                                <Text style={{ fontSize: 12, color: 'gray' }}>즉시구매가({item?.buyNowPrice.toLocaleString()}원) </Text>
+                            </TouchableOpacity>
+                        </View>
+                    ) : (
+                        <View style={styles.bidBtnArea}>
+                            <TouchableOpacity style={styles.bidBtn} onPress={openBidModal}>
+                                <Text style={styles.bidText}>입찰하기</Text>
+                            </TouchableOpacity>
+                        </View>
+                    )}
+                </View>
+
+                {/* 풀스크린 이미지 모달 */}
+                <FullScreenImageViewer
+                    visible={isVisible}
+                    onClose={() => setIsVisible(false)}
+                    images={item?.images.map(i => i.url)}
+                    initialIndex={currentIndex}
+                />
+
+                {/* 우측 상단 ... 아이콘 누르면 나오는 모달 */}
+                <BottomActionModal
+                    visible={isModalVisible}
+                    isAuthority={isAuthority}
+                    onClose={() => setIsModalVisible(false)}
+                    userActions={{
+                        onReport: itemReport,
+                        onHideUser: hideUser,
+                    }}
+                    itemActions={{
+                        onModify: itemModify,
+                        onUpdate: itemUpdate,
+                        onDelete: itemDelete,
+                    }}
+                    itemState={item?.state}
+                />
+
+                {/* 입찰 모달 */}
+                <Modal visible={isBidModalVisible} transparent animationType="slide">
+                    <View style={styles.modalOverlay}>
+                        <View style={styles.bidModal}>
+                            <Text style={styles.bidModalTitle}>입찰하기</Text>
+
+                            <Text style={styles.currentPrice}>현재 입찰가: {item?.currentPrice?.toLocaleString()}원</Text>
+
+                            {item?.isBidUnit === 1 ? (
+                                <Text style={styles.yourBid}>
+                                    내 입찰가: {(
+                                        (item.currentPrice === 0 
+                                        ? item.startPrice 
+                                        : item.currentPrice + item.bidUnit)
+                                    ).toLocaleString()}원
+                                </Text>
+                            ) : (
+                                <>
+                                    <Text style={styles.label}>내 입찰가</Text>
+                                    <TextInput
+                                        style={styles.input}
+                                        keyboardType="numeric"
+                                        value={Number(bidPrice).toLocaleString()}
+                                        onChangeText={setBidPrice}
+                                        placeholder="100원 단위까지 입력"
+                                    />
+                                </>
+                            )}
+
+                            {/* 버튼 영역 */}
+                            <View style={styles.buttonRow}>
+                                <TouchableOpacity onPress={closeBidModal} style={styles.cancelBtn}>
+                                    <Text style={styles.cancelText}>취소</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity onPress={handleSubmitBid} style={styles.confirmBtn}>
+                                    <Text style={styles.confirmText}>입찰</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
                     </View>
-                ) : (
-                    <View style={styles.bidBtnArea}>
-                        <TouchableOpacity style={styles.bidBtn} onPress={openBidModal}>
-                            <Text style={styles.bidText}>입찰하기</Text>
-                        </TouchableOpacity>
+                </Modal>
+
+                {/* 즉시 낙찰 모달 */}
+                <Modal visible={isSuccessfulBidModalVisible} transparent animationType="slide">
+                    <View style={styles.modalOverlay}>
+                        <View style={styles.bidModal}>
+                            <Text style={styles.bidModalTitle}>즉시 낙찰받기</Text>
+
+                            <Text style={styles.currentPrice}>
+                                즉시 구매가: {item?.buyNowPrice?.toLocaleString()}원
+                            </Text>
+
+                            <Text style={styles.warningText}>
+                                즉시 낙찰 시 본 상품은 더 이상 입찰이 불가능하며,{'\n'}
+                                낙찰이 확정됩니다. 진행하시겠습니까?
+                            </Text>
+
+                            {/* 버튼 영역 */}
+                            <View style={styles.buttonRow}>
+                                <TouchableOpacity onPress={closeSuccessfullBidModal} style={styles.cancelBtn}>
+                                    <Text style={styles.cancelText}>취소</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity onPress={handleSuccessfullBid} style={styles.confirmBtn}>
+                                    <Text style={styles.confirmText}>낙찰받기</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    </View>
+                </Modal>
+
+                {/* 경매 상태 업데이트 모달 */}
+                <Modal visible={stateUpdateModal} transparent animationType="slide">
+                    <View style={styles.modalOverlay}>
+                        <View style={styles.bidModal}>
+                            <Text style={styles.bidModalTitle}>경매 상태 변경</Text>
+
+                            <Text style={styles.warningText}>
+                                {stateUpdateMessage}
+                            </Text>
+
+                            <View style={styles.buttonRow}>
+                                <TouchableOpacity onPress={() => setStateUpdateModal(false)} style={styles.cancelBtn}>
+                                    <Text style={styles.cancelText}>취소</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity style={styles.confirmBtn} onPress={updateItemState}>
+                                    <Text style={styles.confirmText}>{stateUpdateBtnText}</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    </View>
+                </Modal>
+
+                {loading && (
+                    <View style={styles.spinnerWrapper}>
+                        <ActivityIndicator size="large" color="#6495ED" />
                     </View>
                 )}
             </View>
-
-            {/* 풀스크린 이미지 모달 */}
-            <FullScreenImageViewer
-                visible={isVisible}
-                onClose={() => setIsVisible(false)}
-                images={item?.images.map(i => i.url)}
-                initialIndex={currentIndex}
-            />
-
-            {/* 우측 상단 ... 아이콘 누르면 나오는 모달 */}
-            <BottomActionModal
-                visible={isModalVisible}
-                isAuthority={isAuthority}
-                onClose={() => setIsModalVisible(false)}
-                userActions={{
-                    onReport: itemReport,
-                    onHideUser: hideUser,
-                }}
-                itemActions={{
-                    onModify: itemModify,
-                    onUpdate: itemUpdate,
-                    onDelete: itemDelete,
-                }}
-                itemState={item?.state}
-            />
-
-            {/* 입찰 모달 */}
-            <Modal visible={isBidModalVisible} transparent animationType="slide">
-                <View style={styles.modalOverlay}>
-                    <View style={styles.bidModal}>
-                        <Text style={styles.bidModalTitle}>입찰하기</Text>
-
-                        <Text style={styles.currentPrice}>현재 입찰가: {item?.currentPrice?.toLocaleString()}원</Text>
-
-                        {item?.isBidUnit === 1 ? (
-                            <Text style={styles.yourBid}>
-                                내 입찰가: {(
-                                    (item.currentPrice === 0 
-                                    ? item.startPrice 
-                                    : item.currentPrice + item.bidUnit)
-                                ).toLocaleString()}원
-                            </Text>
-                        ) : (
-                            <>
-                                <Text style={styles.label}>내 입찰가</Text>
-                                <TextInput
-                                    style={styles.input}
-                                    keyboardType="numeric"
-                                    value={Number(bidPrice).toLocaleString()}
-                                    onChangeText={setBidPrice}
-                                    placeholder="100원 단위까지 입력"
-                                />
-                            </>
-                        )}
-
-                        {/* 버튼 영역 */}
-                        <View style={styles.buttonRow}>
-                            <TouchableOpacity onPress={closeBidModal} style={styles.cancelBtn}>
-                                <Text style={styles.cancelText}>취소</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity onPress={handleSubmitBid} style={styles.confirmBtn}>
-                                <Text style={styles.confirmText}>입찰</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                </View>
-            </Modal>
-
-            {/* 즉시 낙찰 모달 */}
-            <Modal visible={isSuccessfulBidModalVisible} transparent animationType="slide">
-                <View style={styles.modalOverlay}>
-                    <View style={styles.bidModal}>
-                        <Text style={styles.bidModalTitle}>즉시 낙찰받기</Text>
-
-                        <Text style={styles.currentPrice}>
-                            즉시 구매가: {item?.buyNowPrice?.toLocaleString()}원
-                        </Text>
-
-                        <Text style={styles.warningText}>
-                            즉시 낙찰 시 본 상품은 더 이상 입찰이 불가능하며,{'\n'}
-                            낙찰이 확정됩니다. 진행하시겠습니까?
-                        </Text>
-
-                        {/* 버튼 영역 */}
-                        <View style={styles.buttonRow}>
-                            <TouchableOpacity onPress={closeSuccessfullBidModal} style={styles.cancelBtn}>
-                                <Text style={styles.cancelText}>취소</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity onPress={handleSuccessfullBid} style={styles.confirmBtn}>
-                                <Text style={styles.confirmText}>낙찰받기</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                </View>
-            </Modal>
-        </View>
+        </SafeTopWrapper>
     );
 };
 
@@ -804,7 +923,6 @@ const screenHeight = Dimensions.get('window').height;
 
 const styles = StyleSheet.create({
     container: {
-        top: HEADER_HEIGHT,
         flex: 1,
         backgroundColor: '#fff',
     },
@@ -985,7 +1103,7 @@ const styles = StyleSheet.create({
         borderTopWidth: 1,
         borderTopColor: '#eee',
         paddingTop: 12,
-        marginTop: 12,
+        marginTop: 24,
         justifyContent: 'space-around',
     },
     priceBox: {

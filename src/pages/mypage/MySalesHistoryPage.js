@@ -8,6 +8,7 @@ import { useNavigation } from '@react-navigation/native';
 import axios from 'axios';
 import Config from 'react-native-config';
 import { AuthContext } from '../../contexts/AuthContext';
+import Toast from 'react-native-toast-message';
 
 const MySalesHistoryPage = () => {    
     const navigation = useNavigation();
@@ -21,8 +22,14 @@ const MySalesHistoryPage = () => {
     const [hasMore, setHasMore] = useState(true);      // 다음 페이지 여부
     const [isLoading, setIsLoading] = useState(false); // 중복 요청 방지
 
+    const toastOptions = {
+        position: 'bottom',
+        bottomOffset: 120,
+        visibilityTime: 2000,
+    };
 
     const tabs = [
+        { label: '경매전', key: '경매전' },
         { label: '경매중', key: '경매중' },
         { label: '낙찰완료', key: '낙찰완료' },
         { label: '판매완료', key: '판매완료' },
@@ -50,7 +57,6 @@ const MySalesHistoryPage = () => {
                     }
                 }
             );
-            console.log(res.data);
             if(res.data.result === "success") {
                 const newItems = res.data.items;
 
@@ -65,7 +71,13 @@ const MySalesHistoryPage = () => {
                 setHasMore(newItems.length > 0);
             }
         } catch (error) {
-            console.log(error);
+            // 아이템 조회 실패
+            Toast.show({
+                ...toastOptions,
+                type: 'error',
+                text1: '내 경매 물품을 불러오는데 실패했습니다.',
+            });
+            navigation.goBack();
         } finally {
             setIsLoading(false);
         }
@@ -76,6 +88,8 @@ const MySalesHistoryPage = () => {
             var message = "";
             if (activeTab === '경매중') {
                 message = '경매중인 물품이 없어요.';
+            }else if (activeTab === '경매전') {
+                message = '경매전인 물품이 없어요.';
             }else if (activeTab === '낙찰완료') {
                 message = '낙찰이 완료된 물품이 없어요.';
             }else if (activeTab === '판매완료') {

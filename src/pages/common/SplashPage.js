@@ -39,7 +39,6 @@ const SplashPage = ({ navigation, route }) => {
 
     // 처음 앱 실행 시
     const checkAuth = async () => {
-        console.log("이쪽");
         try {
             const token = await AsyncStorage.getItem('accessToken');
             const refreshToken = await AsyncStorage.getItem('refreshToken');

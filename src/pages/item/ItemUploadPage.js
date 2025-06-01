@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import {
     View,
     TextInput,
@@ -12,7 +12,9 @@ import {
     Platform,
     Text,
     PermissionsAndroid,
+    ActivityIndicator
 } from 'react-native';
+import mime from 'react-native-mime-types';
 import axios from 'axios';
 import Config from 'react-native-config';
 import * as ImagePicker from 'react-native-image-picker';
@@ -21,9 +23,10 @@ import AddButton from '../../components/AddButton';
 import RequiredLabel from '../../components/RequireLabel';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import DateTimeModal from '../../components/DateTimeModal';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import RNFS from 'react-native-fs';
 import Toast from 'react-native-toast-message';
+import { AuthContext } from '../../contexts/AuthContext';
+import ImageResizer from 'react-native-image-resizer';
 
 const STATUS_BAR_HEIGHT = Platform.OS === 'android'
     ? StatusBar.currentHeight
@@ -39,6 +42,7 @@ const MAX_IMAGE_SIZE_MB = 2;
 
 const ItemUploadPage = ({ navigation }) => {
     const apiUrl = Config.API_URL;
+    const { token } = useContext(AuthContext);
 
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
@@ -58,6 +62,7 @@ const ItemUploadPage = ({ navigation }) => {
     const [endDateString, setEndDateString] = useState("");
 
     const [pickerType, setPickerType] = useState("");
+    const [loading, setLoading] = useState(false);
 
     const toastOptions = {
         position: 'bottom',
@@ -112,33 +117,42 @@ const ItemUploadPage = ({ navigation }) => {
             }
 
             // ✅ 크기 확인 필터링
-            const filtered = [];
+            const resizedImages = [];
             for (const img of selected) {
                 try {
-                    const cleanUri = img.uri.replace('file://', '');
-                    const stat = await RNFS.stat(cleanUri);
+                    const resized = await ImageResizer.createResizedImage(
+                        img.uri,
+                        800,
+                        800,
+                        'JPEG',
+                        70
+                    );
+
+                    // 용량 제한 검사 (선택)
+                    const path = resized.uri.replace('file://', '');
+                    const stat = await RNFS.stat(path);
                     const sizeMB = stat.size / (1024 * 1024);
-
-                    // console.log("sizeMB : ", sizeMB);
-                    // console.log("MAX_IMAGE_SIZE_MB : ", MAX_IMAGE_SIZE_MB);
-
                     if (sizeMB > MAX_IMAGE_SIZE_MB) {
-                        Alert.alert('이미지 용량 초과', `2MB를 초과한 이미지는 제외됩니다.\n(${img.fileName || '이름 없음'})`);
+                        Alert.alert('압축 후에도 용량 초과', `${img.fileName || '이미지'}는 제외됩니다.`);
                         continue;
                     }
 
-                    filtered.push(img);
+                    resizedImages.push({
+                        uri: resized.uri,
+                        fileName: img.fileName || `resized_${Date.now()}.jpg`,
+                        type: 'image/jpeg',
+                    });
                 } catch (err) {
-                    // console.log('크기 확인 실패:', err);
+                    console.warn('리사이즈 실패:', err);
                 }
             }
 
-            if (filtered.length === 0) {
-            Alert.alert('모든 이미지가 용량 초과로 제외되었습니다.');
-            return;
+            if (resizedImages.length === 0) {
+                Alert.alert('모든 이미지가 용량 초과로 제외되었습니다.');
+                return;
             }
-        
-            setImages(prev => [...prev, ...selected]);
+
+            setImages(prev => [...prev, ...resizedImages]);
         });
     };
 
@@ -148,7 +162,7 @@ const ItemUploadPage = ({ navigation }) => {
     };
 
 
-    // 등록 시 필수 항목 체크크
+    // 등록 시 필수 항목 체크
     const isDirty = Boolean(
         title.trim().length > 0 ||
         description.trim().length > 0 ||
@@ -158,6 +172,7 @@ const ItemUploadPage = ({ navigation }) => {
     const handleTempSave = () => {};
 
     const itemUpload = async () => {
+        setLoading(true);
         const isValid = Boolean(
             title.trim() &&
             description.trim() &&
@@ -167,38 +182,40 @@ const ItemUploadPage = ({ navigation }) => {
 
         if(!isValid) {
             Alert.alert("사진, 제목, 설명, 시작가는 필수 항목입니다.");
+            setLoading(false);
             return;
         }
 
-        const payload = {
-            title,
-            description,
-            startTime: startDate.toISOString(),
-            endTime: endDate.toISOString(),
-            startPrice: Number(startPrice.replace(/,/g, '')),
-            bidUnit: Number(bidIncrement.replace(/,/g, '')),
-            buyNowPrice: Number(buyNowPrice.replace(/,/g, '')),
-            isBidUnit: bidIncrement === '' || bidIncrement === 0 ? 0 : 1,
-            status: 1,
-            images: images.map((img, i) => ({
+        const formData = new FormData();
+        formData.append('title', title);
+        formData.append('description', description);
+        formData.append('startTime', startDate.toISOString());
+        formData.append('endTime', endDate.toISOString());
+        formData.append('startPrice', Number(startPrice.replace(/,/g, '')));
+        formData.append('bidUnit', Number(bidIncrement.replace(/,/g, '')));
+        formData.append('buyNowPrice', Number(buyNowPrice.replace(/,/g, '')));
+        formData.append('isBidUnit', bidIncrement === '' || bidIncrement === 0 ? 0 : 1);
+        formData.append('status', 1);
+
+        images.forEach((img, i) => {
+            formData.append('images', {
+                uri: Platform.OS === 'ios' ? img.uri.replace('file://', '') : img.uri,
                 name: img.fileName || `image_${i}.jpg`,
-                type: img.type,
-                base64: img.base64, // 👈 이거 중요
-                isThumbnail: i == 0 ? 1 : 0,
-            })),
-        };
-        
-        const accessToken = await AsyncStorage.getItem('accessToken');
+                type: img.type || mime.lookup(img.uri) || 'image/jpeg',
+            });
+            formData.append('isThumbnail', i === 0 ? '1' : '0'); // 서버에서 첫 번째 이미지를 썸네일로 인식하게끔
+        });
+
         try {
-            const res = await axios.post(`${apiUrl}/api/item/create`, payload, {
+            const res = await axios.post(`${apiUrl}/api/item/create`, formData, {
                 headers: {
                     // formData를 사용할때는 Content-Type을 설정하지않고, axios가 자동으로 설정하게 둬야함
                     // 그래서 주석처리
-                    // 'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${accessToken}`
+                    'Content-Type': 'multipart/form-data',
+                    'Authorization': `Bearer ${token}`
                 }
             });
-            console.log(res);
+
             if(res.data.result === "success") {
                 // 성공
                 // Alert.alert("경매물품 등록이 완료되었습니다.");
@@ -209,14 +226,24 @@ const ItemUploadPage = ({ navigation }) => {
                 });
                 navigation.replace("Main");
             }else {
-                // console.log(res);
+                Toast.show({
+                    ...toastOptions,
+                    type: 'error',
+                    text1: '경매물품 등록에 실패했습니다.',
+                });
             }
             
         } catch (error) {
             // console.log('요청실패');
             // console.log(error);
+            Toast.show({
+                ...toastOptions,
+                type: 'error',
+                text1: '경매물품 등록에 실패했습니다.',
+            });
+        } finally {
+            setLoading(false);
         }
-
     };
 
     // 경매 시작시간 선택할 때
@@ -460,6 +487,12 @@ const ItemUploadPage = ({ navigation }) => {
             <View style={styles.footer}>
                 <AddButton title="등록하기" onPress={itemUpload} style={styles.footerButton} />
             </View>
+
+            {loading && (
+                <View style={styles.spinnerWrapper}>
+                    <ActivityIndicator size="large" color="#6495ED" />
+                </View>
+            )}
         </SafeAreaView>
     );
 }
@@ -625,6 +658,17 @@ const styles = StyleSheet.create({
     footerButton: {
         width: '100%',
         marginBottom: 20,
+    },
+    spinnerWrapper: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(255,255,255,0.5)',
+        zIndex: 999,
     },
 });
 
