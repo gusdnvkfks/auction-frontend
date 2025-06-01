@@ -545,6 +545,7 @@ const ItemDetailPage = () => {
                 setStateUpdateMessage("경매 중 -> 낙찰완료\n입찰자가 있는 경매는 경매 전으로 되돌릴 수 없습니다.\n경매를 종료하려면 삭제 기능을 이용해 주세요.");
                 setStateUpdateBtnText("경매 낙찰");
                 // 경매 낙찰 버튼 누르면 입찰자 목록으로 가야됨.
+                setUpdateState(2);
             }else {
                 setStateUpdateMessage("경매 중 -> 경매 전");
                 setStateUpdateBtnText("경매 취소");
@@ -556,36 +557,43 @@ const ItemDetailPage = () => {
     
     // 상태 변경
     const updateItemState = async () => {
-        setLoading(true);
-        try {
-            const res = await axios.patch(`${apiUrl}/api/item/${itemId}/state`,
-                {
-                    state: udpateState,
-                },
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                        "Content-Type": "application/json",
+        if(udpateState === 0 || udpateState === 1) {
+            // updateState가 0 또는 1일 때는 그냥 상태값 변경만 해주면되서 api 호출출
+            setLoading(true);
+            try {
+                const res = await axios.patch(`${apiUrl}/api/item/${itemId}/state`,
+                    {
+                        state: udpateState,
+                    },
+                    {
+                        headers: {
+                            Authorization: `Bearer ${token}`,
+                            "Content-Type": "application/json",
+                        }
                     }
+                );
+                if(res.data.result === "success") {
+                    console.log('상태 업데이트 성공');
+                    setStateUpdateModal(false);
+                    setIsModalVisible(false);
+                    Toast.show({
+                        ...toastOptions,
+                        type: 'success',
+                        text1: '경매 물품의 상태가 변경되었습니다.',
+                    });
+                    setItem(res.data.item);
                 }
-            );
-            console.log("res.data : ", res.data);
-            console.log("res.data.result : ", res.data.result);
-            if(res.data.result === "success") {
-                console.log('상태 업데이트 성공');
-                setStateUpdateModal(false);
-                setIsModalVisible(false);
-                Toast.show({
-                    ...toastOptions,
-                    type: 'success',
-                    text1: '경매 물품의 상태가 변경되었습니다.',
-                });
-                setItem(res.data.item);
+            }catch (error) {
+                console.log("error : ", error);
+            }finally {
+                setLoading(false);
             }
-        }catch (error) {
-            console.log("error : ", error);
-        }finally {
-            setLoading(false);
+        }else if(udpateState === 2) {
+            // updateState가 2일때는 입찰자 목록 페이지로 이동
+            navigation.navigate("BidderList", {
+                itemId: item.id,
+                updateState: udpateState,
+            });
         }
     }
     // 내 경매 물품 수정
