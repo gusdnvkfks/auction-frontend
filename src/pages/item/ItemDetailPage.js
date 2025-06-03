@@ -139,7 +139,6 @@ const ItemDetailPage = () => {
             if(res.data.result === "success") {
                 // 조회 성공
                 setItem(res.data.item);
-                console.log(res.data.item.endTime);
                 // 수정 권한 처리
                 setIsAuthority(res.data.authority);
                 // 찜 아이콘 처리
@@ -530,7 +529,6 @@ const ItemDetailPage = () => {
 
     // 내 경매 물품 상태 업데이트
     const itemUpdate = async () => {
-        console.log("item state : ", item.state);
         if(item.state === 0) {
             // 경매 전, state가 0일때는 경매중으로밖에 못바꿈.
             setStateUpdateMessage("경매 전 -> 경매 중");
@@ -577,7 +575,7 @@ const ItemDetailPage = () => {
                     }
                 );
                 if(res.data.result === "success") {
-                    console.log('상태 업데이트 성공');
+                    // console.log('상태 업데이트 성공');
                     setStateUpdateModal(false);
                     setIsModalVisible(false);
                     Toast.show({
@@ -588,7 +586,7 @@ const ItemDetailPage = () => {
                     setItem(res.data.item);
                 }
             }catch (error) {
-                console.log("error : ", error);
+                // console.log("error : ", error);
             }finally {
                 setLoading(false);
             }
@@ -612,13 +610,26 @@ const ItemDetailPage = () => {
     }
     // 내 경매 물품 수정
     const itemModify = async () => {
-        
+        // 경매 물품 수정은 경매전 상태이거나 경매중 상태라면 입찰자가 없어야 가능
+        if(item.state === 0 || (item.state === 1 && item._count.bids === 0)) {
+            setIsModalVisible(false);
+            navigation.navigate("ItemEdit", {
+                itemId: item.id,
+            });
+        }else {
+            setIsModalVisible(false);
+            Toast.show({
+                ...toastOptions,
+                type: "error",
+                text1: "경매 물품 수정 가능한 단계가 아닙니다.",
+            });
+            return;
+        }
     }
     // 내 경매 물품 삭제
     const itemDelete = async () => {
         
     }
-
 
     return (
         <SafeTopWrapper>

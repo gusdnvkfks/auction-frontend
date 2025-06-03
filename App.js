@@ -26,6 +26,7 @@ import SearchPage from './src/pages/main/SearchPage';
 // item page
 import ItemUploadPage from './src/pages/item/ItemUploadPage';
 import ItemDetailPage from './src/pages/item/ItemDetailPage';
+import ItemEditPage from './src/pages/item/ItemEditPage';
 // mypage
 import MySalesHistoryPage from './src/pages/mypage/MySalesHistoryPage';
 import BidderListPage from './src/pages/mypage/BidderListPage';
@@ -111,6 +112,7 @@ export default function App() {
                                 <Stack.Screen name="Main" component={MainTabNavigator} options={{ headerShown: false }} />
                                 <Stack.Screen name="ItemUpload" component={ItemUploadPage} options={{ headerShown: false }} />
                                 <Stack.Screen name="ItemDetail" component={ItemDetailPage} options={{ headerShown: false }} />
+                                <Stack.Screen name="ItemEdit" component={ItemEditPage} options={{ headerShown: false }} />
                                 <Stack.Screen name="MySalesHistory" component={MySalesHistoryPage} options={{ headerShown: false }} />
                                 <Stack.Screen name="BidderList" component={BidderListPage} options={{ headerShown: false }} />
                                 <Stack.Screen name="CompleteSale" component={CompleteSalePage} options={{ headerShown: false }} />

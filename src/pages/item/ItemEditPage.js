@@ -1,17 +1,7 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import {
-    View,
-    TextInput,
-    StyleSheet,
-    ScrollView,
-    Alert,
-    TouchableOpacity,
-    Image,
-    StatusBar,
-    Platform,
-    Text,
-    PermissionsAndroid,
-    ActivityIndicator
+    View, TextInput, StyleSheet, ScrollView, Alert, TouchableOpacity,
+    Image, SafeAreaView, StatusBar, Platform, Text, ActivityIndicator, PermissionsAndroid
 } from 'react-native';
 import mime from 'react-native-mime-types';
 import axios from 'axios';
@@ -21,28 +11,18 @@ import AppText from '../../components/AppText';
 import AddButton from '../../components/AddButton';
 import RequiredLabel from '../../components/RequireLabel';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import DateTimeModal from '../../components/DateTimeModal';
-import RNFS from 'react-native-fs';
 import Toast from 'react-native-toast-message';
 import { AuthContext } from '../../contexts/AuthContext';
-import ImageResizer from 'react-native-image-resizer';
 import SafeTopWrapper from '../../components/SafeTopWrapper';
-
-const STATUS_BAR_HEIGHT = Platform.OS === 'android'
-    ? StatusBar.currentHeight
-    : 20;
-const HOME_INDICATOR_HEIGHT = Platform.OS === 'ios' ? 34 : 0;
-const HEADER_HEIGHT = 48;
-const FOOTER_HEIGHT = 56;
+import DateTimeModal from '../../components/DateTimeModal';
 
 const START_OPTIONS = ['등록즉시', '1일뒤', '직접입력'];
 const END_OPTIONS = ['수동마감', '3일뒤', '1주일뒤', '직접입력'];
 
-const MAX_IMAGE_SIZE_MB = 2;
-
-const ItemUploadPage = ({ navigation }) => {
+const ItemEditPage = ({ navigation, route }) => {
     const apiUrl = Config.API_URL;
     const { token } = useContext(AuthContext);
+    const { itemId } = route.params;
 
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
@@ -50,19 +30,20 @@ const ItemUploadPage = ({ navigation }) => {
     const [bidIncrement, setBidIncrement] = useState('');
     const [buyNowPrice, setBuyNowPrice] = useState('');
     const [images, setImages] = useState([]);
+    const [loading, setLoading] = useState(false);
 
+    // 경매 시작시간, 마감시간 관련
     const [startOption, setStartOption] = useState('등록즉시');
     const [startDate, setStartDate] = useState(new Date());
     const [showStartPicker, setShowStartPicker] = useState(false);
     const [startDateString, setStartDateString] = useState("");
-    
+
     const [endOption, setEndOption] = useState('수동마감');
     const [endDate, setEndDate] = useState(() => new Date('9999-12-31T23:59:59'));
     const [showEndPicker, setShowEndPicker] = useState(false);
     const [endDateString, setEndDateString] = useState("");
 
     const [pickerType, setPickerType] = useState("");
-    const [loading, setLoading] = useState(false);
 
     const toastOptions = {
         position: 'bottom',
@@ -70,8 +51,58 @@ const ItemUploadPage = ({ navigation }) => {
         visibilityTime: 2000,
     };
 
+    useEffect(() => {
+        fetchItemInfo();
+    }, []);
+
+    const fetchItemInfo = async () => {
+        setLoading(true);
+
+        try {
+            const res = await axios.get(`${apiUrl}/api/item/edit-info/${itemId}`, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    "Content-Type": "application/json"
+                }
+            });
+            if (res.data.result === 'success') {
+                const item = res.data.item;
+                setStartDate(new Date(item.startTime));
+                setEndDate(new Date(item.endTime));
+                setTitle(item.title);
+                setDescription(item.description);
+                setStartPrice(item.startPrice.toString());
+                setBidIncrement(item.bidUnit?.toString() || '');
+                setBuyNowPrice(item.buyNowPrice?.toString() || '');
+                setImages(item.images.map(img => ({
+                    uri: img.url,
+                    fileName: img.url.split('/').pop(),
+                    type: 'image/jpeg'
+                })));
+                
+                const compareTime = new Date();
+                if (startDate > compareTime) {
+                    setStartDateString(formatDate(startDate));
+                } else {
+                    setStartDateString("");
+                }
+
+                if (!(endDate.getFullYear() === 9999 && endDate.getMonth() === 11 && endDate.getDate() === 31)) {
+                    setEndDateString(formatDate(endDate));
+                } else {
+                    setEndDateString("");
+                }
+            }
+        } catch (e) {
+            console.error(e);
+            Toast.show({ ...toastOptions, type: 'error', text1: '물품 정보를 불러오지 못했습니다.' });
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const requestImagePermission = async () => {
-        if(Platform.OS === 'android' && Platform.Version >= 33) {
+        if (Platform.OS === 'android' && Platform.Version >= 33) {
             const granted = await PermissionsAndroid.request(
                 PermissionsAndroid.PERMISSIONS.READ_MEDIA_IMAGES,
                 {
@@ -85,103 +116,60 @@ const ItemUploadPage = ({ navigation }) => {
             return granted === PermissionsAndroid.RESULTS.GRANTED;
         }
         return true;
-    }
+    };
 
-    // 이미지 선택
     const pickImage = async () => {
         const hasPermission = await requestImagePermission();
-        if(!hasPermission) {
+        if (!hasPermission) {
             Alert.alert('권한 거부됨', '이미지를 선택하려면 권한이 필요합니다.');
             return;
         }
 
         const options = {
             mediaType: 'photo',
-            includeBase64: true,
-            quality: 0.8,
-            selectionLimit: 0, // ✅ 0 = 무제한 선택 허용
+            includeBase64: false,
+            selectionLimit: 0,
         };
-        
+
         ImagePicker.launchImageLibrary(options, async (response) => {
-            if(response.didCancel || response.errorCode || !response.assets?.length) {
-                // console.log('이미지 선택 취소 또는 오류');
-                return;
-            }
-        
+            if (response.didCancel || response.errorCode || !response.assets?.length) return;
+
             const selected = response.assets;
             const totalCount = images.length + selected.length;
-        
-            if(totalCount > 10) {
+
+            if (totalCount > 10) {
                 Alert.alert('사진은 최대 10장까지만 추가할 수 있습니다.');
                 return;
             }
 
-            // ✅ 크기 확인 필터링
-            const resizedImages = [];
-            for (const img of selected) {
-                try {
-                    const resized = await ImageResizer.createResizedImage(
-                        img.uri,
-                        800,
-                        800,
-                        'JPEG',
-                        70
-                    );
+            const newImages = selected.map((img) => ({
+                uri: img.uri,
+                fileName: img.fileName || `image_${Date.now()}.jpg`,
+                type: img.type || mime.lookup(img.uri) || 'image/jpeg',
+            }));
 
-                    // 용량 제한 검사 (선택)
-                    const path = resized.uri.replace('file://', '');
-                    const stat = await RNFS.stat(path);
-                    const sizeMB = stat.size / (1024 * 1024);
-                    if (sizeMB > MAX_IMAGE_SIZE_MB) {
-                        Alert.alert('압축 후에도 용량 초과', `${img.fileName || '이미지'}는 제외됩니다.`);
-                        continue;
-                    }
-
-                    resizedImages.push({
-                        uri: resized.uri,
-                        fileName: img.fileName || `resized_${Date.now()}.jpg`,
-                        type: 'image/jpeg',
-                    });
-                } catch (err) {
-                    console.warn('리사이즈 실패:', err);
-                }
-            }
-
-            if (resizedImages.length === 0) {
-                Alert.alert('모든 이미지가 용량 초과로 제외되었습니다.');
-                return;
-            }
-
-            setImages(prev => [...prev, ...resizedImages]);
+            setImages(prev => [...prev, ...newImages]);
         });
     };
 
-    // 이미지 삭제
     const removeImage = (index) => {
         setImages(prev => prev.filter((_, i) => i !== index));
     };
 
+    const formatCurrencyInput = (text) => {
+        var numeric = text.replace(/[^0-9]/g, '');
+        if(numeric.startsWith('0') && numeric.length > 1) {
+            numeric = numeric.replace(/^0+/, '');
+        }
+        return numeric;
+    };
 
-    // 등록 시 필수 항목 체크
-    const isDirty = Boolean(
-        title.trim().length > 0 ||
-        description.trim().length > 0 ||
-        images.length > 0
-    );
-
-    const handleTempSave = () => {};
-
-    const itemUpload = async () => {
+    const handleSubmitEdit = async () => {
         setLoading(true);
-        const isValid = Boolean(
-            title.trim() &&
-            description.trim() &&
-            startPrice.trim() &&
-            images.length > 0
-        );
+        const isValid = Boolean(title.trim() && description.trim() && startPrice.trim());
 
-        if(!isValid) {
-            Alert.alert("사진, 제목, 설명, 시작가는 필수 항목입니다.");
+        if (!isValid) {
+            Alert.alert("필수 항목을 입력해주세요.");
             setLoading(false);
             return;
         }
@@ -189,13 +177,10 @@ const ItemUploadPage = ({ navigation }) => {
         const formData = new FormData();
         formData.append('title', title);
         formData.append('description', description);
-        formData.append('startTime', startDate.toISOString());
-        formData.append('endTime', endDate.toISOString());
         formData.append('startPrice', Number(startPrice.replace(/,/g, '')));
         formData.append('bidUnit', Number(bidIncrement.replace(/,/g, '')));
         formData.append('buyNowPrice', Number(buyNowPrice.replace(/,/g, '')));
-        formData.append('isBidUnit', bidIncrement === '' || bidIncrement === 0 ? 0 : 1);
-        formData.append('status', 1);
+        formData.append('isBidUnit', bidIncrement === '' || bidIncrement === '0' ? 0 : 1);
 
         images.forEach((img, i) => {
             formData.append('images', {
@@ -203,47 +188,34 @@ const ItemUploadPage = ({ navigation }) => {
                 name: img.fileName || `image_${i}.jpg`,
                 type: img.type || mime.lookup(img.uri) || 'image/jpeg',
             });
-            formData.append('isThumbnail', i === 0 ? '1' : '0'); // 서버에서 첫 번째 이미지를 썸네일로 인식하게끔
+            formData.append('isThumbnail', i === 0 ? '1' : '0');
         });
 
         try {
-            const res = await axios.post(`${apiUrl}/api/item/create`, formData, {
+            const res = await axios.patch(`${apiUrl}/api/item/${itemId}/edit`, formData, {
                 headers: {
-                    // formData를 사용할때는 Content-Type을 설정하지않고, axios가 자동으로 설정하게 둬야함
-                    // 그래서 주석처리
-                    'Content-Type': 'multipart/form-data',
-                    'Authorization': `Bearer ${token}`
+                    Authorization: `Bearer ${token}`
                 }
             });
 
-            if(res.data.result === "success") {
-                // 성공
-                // Alert.alert("경매물품 등록이 완료되었습니다.");
-                Toast.show({
-                    ...toastOptions,
-                    type: 'success',
-                    text1: '경매물품 등록이 완료되었습니다.',
-                });
-                navigation.replace("Main");
-            }else {
-                Toast.show({
-                    ...toastOptions,
-                    type: 'error',
-                    text1: '경매물품 등록에 실패했습니다.',
-                });
+            if (res.data.result === 'success') {
+                Toast.show({ ...toastOptions, type: 'success', text1: '수정 완료되었습니다.' });
+                navigation.goBack();
+            } else {
+                Toast.show({ ...toastOptions, type: 'error', text1: '수정에 실패했습니다.' });
             }
-            
-        } catch (error) {
-            // console.log('요청실패');
-            // console.log(error);
-            Toast.show({
-                ...toastOptions,
-                type: 'error',
-                text1: '경매물품 등록에 실패했습니다.',
-            });
+        } catch (err) {
+            console.error(err);
+            Toast.show({ ...toastOptions, type: 'error', text1: '수정 중 오류가 발생했습니다.' });
         } finally {
             setLoading(false);
         }
+    };
+
+    const formatDate = (date) => {
+        const pad = (n) => String(n).padStart(2, '0');
+        return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ` +
+               `${pad(date.getHours())}:${pad(date.getMinutes())}`;
     };
 
     // 경매 시작시간 선택할 때
@@ -290,22 +262,6 @@ const ItemUploadPage = ({ navigation }) => {
         }
     };
 
-    const formatDate = (date) => {
-        const pad = (n) => String(n).padStart(2, '0');
-        return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ` +
-               `${pad(date.getHours())}:${pad(date.getMinutes())}`;
-    };
-
-    const formatCurrencyInput = (text) => {
-        var numeric = text.replace(/[^0-9]/g, '');
-        if(numeric.startsWith('0') && numeric.length > 1) {
-            numeric = numeric.replace(/^0+/, '');
-        }
-
-        return numeric;
-    }
-
-
     return (
         <SafeTopWrapper style={styles.container}>
             <View style={styles.header}>
@@ -313,12 +269,11 @@ const ItemUploadPage = ({ navigation }) => {
                     <Ionicons name="close" size={24} color="#000" />
                 </TouchableOpacity>
                 <AppText style={styles.headerTitle}>내 물건 경매</AppText>
-                <TouchableOpacity onPress={handleTempSave} disabled={!isDirty}>
-                    <AppText style={[styles.headerBtn, !isDirty && styles.headerBtnDisabled]}>임시저장</AppText>
+                <TouchableOpacity>
+                    {/* <AppText style={styles.headerBtn}>임시저장</AppText> */}
                 </TouchableOpacity>
             </View>
-
-            <ScrollView style={styles.scrollArea} contentContainerStyle={styles.contentContainer}>
+            <ScrollView style={styles.scrollArea} contentContainerStyle={{ padding: 16, paddingBottom: 120 }}>
                 {/* 사진 추가 */}
                 <AppText style={styles.label}>
                     <RequiredLabel>사진 추가</RequiredLabel>
@@ -326,7 +281,7 @@ const ItemUploadPage = ({ navigation }) => {
                 <View style={styles.imageContainer}>
                     {images.length < 10 && (
                         <TouchableOpacity style={styles.addButton} onPress={pickImage}>
-                            <AppText style={styles.addButtonText}>+</AppText>
+                            <Text style={styles.addButtonText}>+</Text>
                         </TouchableOpacity>
                     )}
 
@@ -340,8 +295,7 @@ const ItemUploadPage = ({ navigation }) => {
                             )}
                             <TouchableOpacity
                                 style={styles.deleteButton}
-                                onPress={() => removeImage(i)}
-                            >
+                                onPress={() => removeImage(i)}>
                                 <Text style={styles.deleteButtonText}>×</Text>
                             </TouchableOpacity>
                         </View>
@@ -434,51 +388,24 @@ const ItemUploadPage = ({ navigation }) => {
                     }}
                 />
 
-                {/* 제목 등 나머지 폼 */}
-                <AppText style={styles.label}>
-                    <RequiredLabel>제목</RequiredLabel>
-                </AppText>
-                <TextInput style={styles.input} placeholder="타이틀을 작성해 주세요." value={title} onChangeText={setTitle} />
-                <AppText style={styles.label}>
-                    <RequiredLabel>설명</RequiredLabel>
-                </AppText>
-                <TextInput style={[styles.input, styles.textArea]} placeholder={"사람들에게 입찰을 받을 수 있게 신뢰할 수 있는 내용을\n작성해 주세요.\n\n등록 금지 물품은 제한되거나, 삭제될 수 있어요."} value={description} onChangeText={setDescription} multiline />
-                <AppText style={styles.label}>
-                    <RequiredLabel>시작가 (₩)</RequiredLabel>
-                </AppText>
-                <TextInput
-                    style={styles.input}
-                    placeholder="예: 10,000"
-                    value={startPrice.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                    onChangeText={(text) => {
-                        const formattedStartPrice = formatCurrencyInput(text);
-                        setStartPrice(formattedStartPrice);
-                    }}
-                    keyboardType="number-pad" />
-                <AppText style={styles.label}>입찰 단위 (₩)</AppText>
-                <TextInput
-                    style={styles.input}
-                    placeholder="예: 1,000"
-                    value={bidIncrement.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                    onChangeText={(text) => {
-                        const formattedBidPrice = formatCurrencyInput(text);
-                        setBidIncrement(formattedBidPrice);
-                    }}
-                    keyboardType="number-pad" />
-                <AppText style={styles.label}>즉시 구매가 (₩)</AppText>
-                <TextInput
-                    style={styles.input}
-                    placeholder="예: 50,000"
-                    value={buyNowPrice.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                    onChangeText={(text) => {
-                        const formattedBuyNowPrice = formatCurrencyInput(text);
-                        setBuyNowPrice(formattedBuyNowPrice)
-                    }}
-                    keyboardType="number-pad" />
+                <AppText style={styles.label}><RequiredLabel />제목</AppText>
+                <TextInput style={styles.input} value={title} onChangeText={setTitle} />
+
+                <AppText style={styles.label}><RequiredLabel />설명</AppText>
+                <TextInput style={[styles.input, styles.textArea]} multiline value={description} onChangeText={setDescription} />
+
+                <AppText style={styles.label}><RequiredLabel />시작가</AppText>
+                <TextInput style={styles.input} keyboardType='number-pad' value={startPrice.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} onChangeText={text => setStartPrice(formatCurrencyInput(text))} />
+
+                <AppText style={styles.label}>입찰 단위</AppText>
+                <TextInput style={styles.input} keyboardType='number-pad' value={bidIncrement.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} onChangeText={text => setBidIncrement(formatCurrencyInput(text))} />
+
+                <AppText style={styles.label}>즉시 구매가</AppText>
+                <TextInput style={styles.input} keyboardType='number-pad' value={buyNowPrice.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} onChangeText={text => setBuyNowPrice(formatCurrencyInput(text))} />
             </ScrollView>
 
             <View style={styles.footer}>
-                <AddButton title="등록하기" onPress={itemUpload} style={styles.footerButton} />
+                <AddButton title="수정 완료" onPress={handleSubmitEdit} />
             </View>
 
             {loading && (
@@ -488,13 +415,17 @@ const ItemUploadPage = ({ navigation }) => {
             )}
         </SafeTopWrapper>
     );
-}
+};
+
+const STATUS_BAR_HEIGHT = Platform.OS === 'android'
+    ? StatusBar.currentHeight
+    : 20;
+const HOME_INDICATOR_HEIGHT = Platform.OS === 'ios' ? 34 : 0;
+const HEADER_HEIGHT = 48;
+const FOOTER_HEIGHT = 56;
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#fff'
-    },
+    container: { flex: 1, backgroundColor: '#fff' },
     header: {
         position: 'absolute', top: 0, left: 0, right: 0,
         height: HEADER_HEIGHT + STATUS_BAR_HEIGHT,
@@ -504,7 +435,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#ccc',
         zIndex: 10, elevation: 10,
     },
-    headerTitle: { fontSize: 18, fontWeight: '600' },
+    headerTitle: { fontSize: 18, fontWeight: '600', right: 10 },
     headerBtn: { fontSize: 16, color: '#000' },
     headerBtnDisabled: { color: '#aaa' },
     scrollArea: {
@@ -512,26 +443,40 @@ const styles = StyleSheet.create({
         backgroundColor: '#fff',
         marginTop: STATUS_BAR_HEIGHT
     },
-    contentContainer: {
-        padding: 16,
-        paddingBottom: FOOTER_HEIGHT + HOME_INDICATOR_HEIGHT + 40,
-    },
     label: { marginTop: 20, fontSize: 14, fontWeight: '500', marginBottom: 12 },
     input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 4, padding: 8, marginTop: 4 },
     textArea: { height: 100, textAlignVertical: 'top' },
-    optionRow: { flexDirection: 'row', flexWrap: 'wrap', marginVertical: 8 },
-    optionBtn: { paddingVertical: 6, paddingHorizontal: 12, borderWidth: 1, borderColor: '#ccc', borderRadius: 4, marginRight: 8, marginBottom: 8 },
-    optionBtnActive: { backgroundColor: '#6495ED', borderColor: '#6495ED' },
-    optionText: { fontSize: 12, color: '#000' },
-    optionTextActive: { fontSize: 12, color: '#fff' },
-    chosenDate: { fontSize: 14, color: '#333', marginBottom: 12 },
-
-    // 이미지
+    footer: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        backgroundColor: '#fff',
+        padding: 16,
+        borderTopWidth: 1,
+        borderTopColor: '#ddd',
+    },
     imageContainer: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        marginTop: 8,
+        marginTop: 12,
         paddingRight: 2,
+    },
+    imageWrapper: {
+        position: 'relative',
+        marginRight: 10,
+    },
+    preview: { width: 60, height: 60, borderRadius: 8, borderWidth: 1, borderColor: '#ccc' },
+    deleteButton: {
+        position: 'absolute', top: -6, right: -6,
+        backgroundColor: '#6495ED', borderRadius: 12,
+        width: 18, height: 18, justifyContent: 'center', alignItems: 'center'
+    },
+    deleteButtonText: { color: '#fff', fontSize: 10, fontWeight: 'bold' },
+    spinnerWrapper: {
+        position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+        justifyContent: 'center', alignItems: 'center',
+        backgroundColor: 'rgba(255,255,255,0.5)', zIndex: 999,
     },
     addButton: {
         width: 60,
@@ -548,15 +493,11 @@ const styles = StyleSheet.create({
         fontSize: 30,
         fontWeight: '300'
     },
-    imageWrapper: {
-        position: 'relative',
-        marginRight: 10,
-    },
     labelTag: {
         position: 'absolute',
         bottom: 12,
         left: 1,
-        backgroundColor: '#6495ED', // 하늘색
+        backgroundColor: '#6495ED',
         paddingHorizontal: 9,
         paddingVertical: 2,
         borderRadius: 4,
@@ -567,105 +508,13 @@ const styles = StyleSheet.create({
         fontSize: 10,
         fontWeight: 'bold',
     },
-    preview: {
-        width: 60,
-        height: 60,
-        borderRadius: 8,
-        borderWidth: 1,           // ✅ 테두리 추가
-        borderColor: '#ccc',      // ✅ 연한 회색
-        backgroundColor: '#fff',  // ✅ 이미지 없을 때 대비용 (선택)
-    },
-    deleteButton: {
-        position: 'absolute',
-        top: -6,
-        right: -6,
-        backgroundColor: '#6495ED',
-        borderRadius: 12,
-        width: 18,
-        height: 18,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    deleteButtonText: {
-        color: '#fff',
-        fontSize: 10,
-        fontWeight: 'bold',
-    },
+    optionRow: { flexDirection: 'row', flexWrap: 'wrap', marginVertical: 8 },
+    optionBtn: { paddingVertical: 6, paddingHorizontal: 12, borderWidth: 1, borderColor: '#ccc', borderRadius: 4, marginRight: 8, marginBottom: 8 },
+    optionBtnActive: { backgroundColor: '#6495ED', borderColor: '#6495ED' },
+    optionText: { fontSize: 12, color: '#000' },
+    optionTextActive: { fontSize: 12, color: '#fff' },
+    chosenDate: { fontSize: 14, color: '#333', marginBottom: 12 },
 
-    // 모달
-    modalBg: {
-        flex: 1,
-        backgroundColor: '#00000088',
-        justifyContent: 'center',   // 세로 중앙
-        alignItems: 'center',       // 가로 중앙
-    },
-    modal: {
-        backgroundColor: '#fff',
-        width: '90%',
-        borderRadius: 8,
-        padding: 16,
-    },
-    wheelsRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-around',
-        height: 200,
-    },
-    wheel: {
-        width: '30%',
-    },
-    wheelItem: {
-        paddingVertical: 12,
-        alignItems: 'center',
-    },
-    wheelItemSelected: {
-        backgroundColor: '#eee',
-    },
-    wheelText: {
-        fontSize: 16,
-    },
-    wheelTextSelected: {
-        fontSize: 18,
-        fontWeight: 'bold',
-    },
-    modalBtns: {
-        flexDirection: 'row',
-        justifyContent: 'space-around',
-        paddingVertical: 12,
-        borderTopWidth: 1,
-        borderColor: '#ddd',
-    },
-    
-    // 등록하기 버튼
-    footer: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        height: FOOTER_HEIGHT + HOME_INDICATOR_HEIGHT + 24,
-        paddingBottom: HOME_INDICATOR_HEIGHT,
-        backgroundColor: '#fff',
-        borderTopWidth: 1,
-        borderTopColor: '#ccc',
-        justifyContent: 'center',
-        paddingHorizontal: 16,
-        zIndex: 10,
-        elevation: 10,
-    },
-    footerButton: {
-        width: '100%',
-        marginBottom: 20,
-    },
-    spinnerWrapper: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: 'rgba(255,255,255,0.5)',
-        zIndex: 999,
-    },
 });
 
-export default ItemUploadPage;
+export default ItemEditPage;
