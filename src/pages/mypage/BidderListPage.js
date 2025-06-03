@@ -103,7 +103,7 @@ const BidderListPage = ({ route }) => {
     const handleConfirm = async () => {
         // 낙찰 처리 ㄱㄱ
         try {
-            const res = await axios.post(`${apiUrl}/api/bid/successBid`, 
+            const res = await axios.post(`${apiUrl}/api/bid/success-bid`, 
                 {
                     itemId: itemId,
                     isInstant: false
@@ -130,7 +130,7 @@ const BidderListPage = ({ route }) => {
             Toast.show({
                 ...toastOptions,
                 type: 'error',
-                text1: "낙찰에 실패했습니다다."
+                text1: "낙찰에 실패했습니다."
             });
         }
     }

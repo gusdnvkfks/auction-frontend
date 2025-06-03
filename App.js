@@ -29,6 +29,7 @@ import ItemDetailPage from './src/pages/item/ItemDetailPage';
 // mypage
 import MySalesHistoryPage from './src/pages/mypage/MySalesHistoryPage';
 import BidderListPage from './src/pages/mypage/BidderListPage';
+import CompleteSalePage from './src/pages/mypage/CompleteSalePage';
 // NAVIGATORS
 import MainTabNavigator from './src/navigators/MainTabNavigator';
 
@@ -112,6 +113,7 @@ export default function App() {
                                 <Stack.Screen name="ItemDetail" component={ItemDetailPage} options={{ headerShown: false }} />
                                 <Stack.Screen name="MySalesHistory" component={MySalesHistoryPage} options={{ headerShown: false }} />
                                 <Stack.Screen name="BidderList" component={BidderListPage} options={{ headerShown: false }} />
+                                <Stack.Screen name="CompleteSale" component={CompleteSalePage} options={{ headerShown: false }} />
                             </Stack.Navigator>
                         </NavigationContainer>
                         <Toast config={toastConfig} />

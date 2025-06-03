@@ -26,7 +26,6 @@ dayjs.locale('ko');
 
 const ItemDetailPage = () => {
     const apiUrl = Config.API_URL;
-    // 토큰
     const { token } = useContext(AuthContext);
     
     const navigation = useNavigation();
@@ -551,6 +550,11 @@ const ItemDetailPage = () => {
                 setStateUpdateBtnText("경매 취소");
                 setUpdateState(0);
             }
+        }else if(item.state === 2) {
+            // 판매중, state가 2일때는 판매완료로만 변경가능
+            setStateUpdateMessage("낙찰 완료 -> 판매 완료\n판매완료로 변경 시 되돌릴 수 없습니다.");
+            setStateUpdateBtnText("판매 완료");
+            setUpdateState(3);
         }
         setStateUpdateModal(true);
     }
@@ -590,7 +594,17 @@ const ItemDetailPage = () => {
             }
         }else if(udpateState === 2) {
             // updateState가 2일때는 입찰자 목록 페이지로 이동
+            setStateUpdateModal(false);
+            setIsModalVisible(false);
             navigation.navigate("BidderList", {
+                itemId: item.id,
+                updateState: udpateState,
+            });
+        }else if(udpateState === 3) {
+            // updateState가 3일때는 판매완료 처리 페이지로 이동
+            setStateUpdateModal(false);
+            setIsModalVisible(false);
+            navigation.navigate("CompleteSale", {
                 itemId: item.id,
                 updateState: udpateState,
             });
@@ -655,6 +669,17 @@ const ItemDetailPage = () => {
                                                     resizeMode="contain"
                                                 />
                                                 <Text style={styles.overlayText}>낙찰완료</Text>
+                                            </View>
+                                        )}
+                                        {/* ✅ 판매완료료 완료 오버레이 */}
+                                        {item.state === 3 && (
+                                            <View style={styles.overlay}>
+                                                <Image
+                                                    source={require('../../assets/images/logo.png')} // 경매봉 이미지
+                                                    style={styles.gavel}
+                                                    resizeMode="contain"
+                                                />
+                                                <Text style={styles.overlayText}>판매완료</Text>
                                             </View>
                                         )}
                                     </TouchableOpacity>
