@@ -6,7 +6,9 @@ import {
     StyleSheet,
     Keyboard,
     Dimensions,
-    Alert
+    Alert,
+    KeyboardAvoidingView,
+    ScrollView
 } from 'react-native';
 import { TextInputMask } from 'react-native-masked-text';
 import axios from 'axios';
@@ -76,7 +78,7 @@ const LoginPage = ({ navigation }) => {
         // 전화 번호 입력 후에 확인 버튼이랑, 인증번호 입력 후에 확인 버튼이랑 처리가 다름
         if(inputType === 'phone') {
             // 인풋타입이 폰이면
-            if(phoneNumber.length == 13) {
+            if(phoneNumber.length === 13) {
                 await requestPhoneCertify();
             }else {
                 Alert.alert("전화번호를 다시 확인해주세요.");
@@ -113,6 +115,7 @@ const LoginPage = ({ navigation }) => {
 
     // 인증번호 발송 함수
     const requestPhoneCertify = async () => {
+        Alert.alert("apiUrl : ", apiUrl);
         try {
             const res = await axios.post(`${apiUrl}/api/phone-certify/send`, 
                 {
@@ -125,7 +128,7 @@ const LoginPage = ({ navigation }) => {
                     }
                 }
             );
-    
+
             if(res.data.result === "success") {
                 setIsPhoneComplete(true);
                 setIsPhoneEditable(false);
@@ -201,58 +204,41 @@ const LoginPage = ({ navigation }) => {
     const certifyInputRef = useRef(null);
 
     return (
-        <View style={styles.container}>
-
-            {/* 임시 토글 버튼 */}
-            <TouchableOpacity
-                style={styles.debugToggle}
-                onPress={() => setKeyboardHeight(prev => (prev > 0 ? 0 : 300))}
+        <View style={{ flex: 1 }}>
+            <KeyboardAvoidingView
+                style={{ flex: 1 }}
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                keyboardVerticalOffset={0} // Android에서 생기는 미세 밀림 방지
             >
-                <Text style={{color:'#fff'}}>Toggle KB</Text>
-            </TouchableOpacity>
+                <ScrollView
+                    contentContainerStyle={styles.container}
+                    keyboardShouldPersistTaps="handled"
+                >
+                    <AppText style={styles.title}>전화번호 인증을 해주세요.</AppText>
 
+                    {/* 전화번호 입력 */}
+                    <TextInputMask
+                        type={'custom'}
+                        options={{ mask: '999 9999 9999' }}
+                        placeholder='전화번호를 입력해주세요.'
+                        keyboardType='number-pad'
+                        maxLength={13}
+                        value={phoneNumber}
+                        onChangeText={setPhoneNumber}
+                        onFocus={() => setActiveInput('phone')}
+                        onBlur={() => setActiveInput(null)}
+                        editable={isPhoneEditable}
+                        style={[
+                        styles.input,
+                        !isPhoneEditable && styles.inputDisabled,
+                        ]}
+                    />
 
-            <AppText style={styles.title}>전화번호 인증을 해주세요.</AppText>
-
-            {/* 전화번호 입력, 인증번호 발송 버튼 */}
-            <TextInputMask
-                type={'custom'}
-                options={{ mask: '999 9999 9999' }}
-                placeholder='전화번호를 입력해주세요.'
-                keyboardType='number-pad'   // 숫자용 키보드
-                maxLength={13}              // 최대 자리수 제한(11자리)
-                value={phoneNumber}
-                onChangeText={setPhoneNumber}
-                onFocus={() => setActiveInput('phone')}
-                onBlur={() => setActiveInput(null)}
-                editable={isPhoneEditable}
-                style={[
-                    styles.input,
-                    !isPhoneEditable && styles.inputDisabled,  // editable=false일 때만 이 스타일 적용
-                ]}
-            />
-            {!isPhoneComplete && (
-                <>
-                    {(isKeyboardVisible() && activeInput === 'phone') && (
-                        <View style={[
-                            styles.confirmWrapper,
-                            { bottom: keyboardHeight },
-                            phoneNumber.length < 13 && styles.inActiveComfirmBtn
-                        ]}>
-                            <TouchableOpacity onPress={() => handleConfirm('phone')}>
-                                <AppText style={styles.btnText}>확인</AppText>
-                            </TouchableOpacity>
-                        </View>
-                    )}
-                </>
-            )}
-
-
-            {/* 인증번호 입력, 인증번호 재발송 버튼 */}
-            {isPhoneComplete && (
-                <>
-                    <View style={styles.otpContainer}>
-                        <View style={styles.inputWrapper}>
+                    {/* 인증번호 입력 */}
+                    {isPhoneComplete && (
+                        <>
+                        <View style={styles.otpContainer}>
+                            <View style={styles.inputWrapper}>
                             <TextInputMask
                                 type={'custom'}
                                 options={{ mask: '999999' }}
@@ -265,32 +251,41 @@ const LoginPage = ({ navigation }) => {
                                 onFocus={() => setActiveInput('certify')}
                                 onBlur={() => setActiveInput(null)}
                                 refInput={input => {
-                                    // input은 실제 TextInput 인스턴스
-                                    certifyInputRef.current = input;
+                                certifyInputRef.current = input;
                                 }}
                             />
                             <AppText style={styles.timerText}>
                                 {minutes}:{formattedSeconds}
                             </AppText>
+                            </View>
                         </View>
-                    </View>
-                    
-                    <TouchableOpacity style={styles.reCertify} onPress={() => handleConfirm('reCertify')}>
-                        <AppText style={styles.reCertifyText}>인증번호 재발송</AppText>
-                    </TouchableOpacity>
-                </>
-            )}
 
-            {(isKeyboardVisible() && activeInput === 'certify') && (
-                <View style={[styles.confirmWrapper,
-                            { bottom: keyboardHeight },
-                            certifyNumber.length < 6 && styles.inActiveComfirmBtn
-                ]}>
-                    <TouchableOpacity onPress={() => handleConfirm('certify')}>
-                        <AppText>완료</AppText>
-                    </TouchableOpacity>
-                </View>
+                        <TouchableOpacity style={styles.reCertify} onPress={() => handleConfirm('reCertify')}>
+                            <AppText style={styles.reCertifyText}>인증번호 재발송</AppText>
+                        </TouchableOpacity>
+                        </>
+                    )}
+                </ScrollView>
+            </KeyboardAvoidingView>
+
+            {/* 확인 버튼 */}
+            {!isPhoneComplete && activeInput === 'phone' && (
+            <View style={[styles.confirmWrapper, phoneNumber.length < 13 && styles.inActiveComfirmBtn]}>
+                <TouchableOpacity onPress={() => handleConfirm('phone')}>
+                    <AppText style={styles.btnText}>확인</AppText>
+                </TouchableOpacity>
+            </View>
             )}
+        
+
+            {isPhoneComplete && activeInput === 'certify' && (
+            <View style={[styles.confirmWrapper, certifyNumber.length < 6 && styles.inActiveComfirmBtn]}>
+                <TouchableOpacity onPress={() => handleConfirm('certify')}>
+                    <AppText style={styles.btnText}>완료</AppText>
+                </TouchableOpacity>
+            </View>
+            )}
+            
         </View>
     );
 };
@@ -309,6 +304,7 @@ const styles = StyleSheet.create({
         flex: 1,
         paddingTop: '30%',
         backgroundColor: '#fff',
+        position: 'relative',
     },
     title: {
         fontSize: 24,
@@ -337,11 +333,14 @@ const styles = StyleSheet.create({
     },
     confirmWrapper: {
         position: 'absolute',
-        width,
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: 50,
         backgroundColor: '#6495ED',
-        alignItems: 'center',
         justifyContent: 'center',
-        height: 50
+        alignItems: 'center',
+        zIndex: 1000,
     },
     inActiveComfirmBtn: {
         backgroundColor: 'gray',

@@ -15,6 +15,7 @@ import Toast from 'react-native-toast-message';
 import { AuthContext } from '../../contexts/AuthContext';
 import SafeTopWrapper from '../../components/SafeTopWrapper';
 import DateTimeModal from '../../components/DateTimeModal';
+import { RotationGestureHandler } from 'react-native-gesture-handler';
 
 const START_OPTIONS = ['등록즉시', '1일뒤', '직접입력'];
 const END_OPTIONS = ['수동마감', '3일뒤', '1주일뒤', '직접입력'];
@@ -175,12 +176,16 @@ const ItemEditPage = ({ navigation, route }) => {
         }
 
         const formData = new FormData();
+        formData.append('itemId', itemId);
         formData.append('title', title);
         formData.append('description', description);
+        formData.append('startTime', startDate.toISOString());
+        formData.append('endTime', endDate.toISOString());
         formData.append('startPrice', Number(startPrice.replace(/,/g, '')));
         formData.append('bidUnit', Number(bidIncrement.replace(/,/g, '')));
         formData.append('buyNowPrice', Number(buyNowPrice.replace(/,/g, '')));
         formData.append('isBidUnit', bidIncrement === '' || bidIncrement === '0' ? 0 : 1);
+
 
         images.forEach((img, i) => {
             formData.append('images', {
@@ -192,11 +197,17 @@ const ItemEditPage = ({ navigation, route }) => {
         });
 
         try {
-            const res = await axios.patch(`${apiUrl}/api/item/${itemId}/edit`, formData, {
-                headers: {
-                    Authorization: `Bearer ${token}`
+            const res = await axios.patch(`${apiUrl}/api/item/edit/${itemId}`, formData, 
+                {
+                    headers: {
+                        'Content-Type': 'multipart/form-data',
+                        Authorization: `Bearer ${token}`
+                    }
                 }
-            });
+            );
+
+            console.log(res);
+            return;
 
             if (res.data.result === 'success') {
                 Toast.show({ ...toastOptions, type: 'success', text1: '수정 완료되었습니다.' });

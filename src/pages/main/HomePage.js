@@ -4,6 +4,7 @@ import React, { useContext, useState, useEffect, useCallback } from 'react';
 import { Text, StyleSheet, View, Alert, FlatList, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
 import AuctionItem from '../../components/AuctionItem';
 import Icon from 'react-native-vector-icons/FontAwesome';
+import FIcon from 'react-native-vector-icons/Feather';
 import FloatingButton from '../../components/FloatingButton';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -32,19 +33,6 @@ const HomePage = () => {
         getItemList();
     }, [page]);
 
-    // useEffect(() => {
-    //     setItems([]);
-    //     setHasMore(true);
-    //     setCursor(null);
-    //     setPage(1);
-
-    //     // 🔥🔥🔥 이거 추가해야 함
-    //     if(page === 1) {
-    //         getItemList();
-    //     }else {
-    //         setPage(1);
-    //     }
-    // }, [searchKeyword]);
     useFocusEffect(
         useCallback(() => {
             setItems([]);
@@ -165,9 +153,12 @@ const HomePage = () => {
                     <TouchableOpacity 
                         onPress={handleClear}
                         style={styles.clearBtn}>
-                        <Icon name="times-circle" size={22} color="#888" />
+                        <FIcon name="x" size={20} color="#888" />
                     </TouchableOpacity>
                 )}
+            </View>
+            <View>
+                <Text>카테고리영역</Text>
             </View>
             <FlatList contentContainerStyle={styles.scrollContent}
                 data={items}
@@ -209,10 +200,10 @@ const styles = StyleSheet.create({
     searchContainer: {
         flexDirection: 'row',
         alignItems: 'center',
+        // paddingTop: 16,
         // marginRight: 20,
     },
     searchTouchable: {
-        top: HEADER_HEIGHT,
         flexDirection: 'row',
         alignItems: 'center',
         borderWidth: 1,
@@ -227,33 +218,11 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     clearBtn: {
-        top: HEADER_HEIGHT,
         paddingLeft: 5,
         zIndex: 2,
     },
-    searchBar: {
-        top: HEADER_HEIGHT,
-        flexDirection: 'row',
-        alignItems: 'center',
-        borderWidth: 1,
-        borderColor: '#ccc',
-        borderRadius: 8,
-        paddingHorizontal: 10,
-        paddingVertical: 6,
-        margin: 10,
-        backgroundColor: '#fff',
-        height: 40,
-    },
-    searchInput: {
-        flex: 1,
-        color: '#000',
-    },
     searchIcon: {
         marginRight: 8,
-    },
-    searchInput: {
-        flex: 1,
-        height: 40,
     },
     fakeInput: {
         color: '#888',

@@ -103,8 +103,10 @@ const ItemUploadPage = ({ navigation }) => {
         };
         
         ImagePicker.launchImageLibrary(options, async (response) => {
+            setLoading(true);
             if(response.didCancel || response.errorCode || !response.assets?.length) {
                 // console.log('이미지 선택 취소 또는 오류');
+                setLoading(false);
                 return;
             }
         
@@ -112,6 +114,7 @@ const ItemUploadPage = ({ navigation }) => {
             const totalCount = images.length + selected.length;
         
             if(totalCount > 10) {
+                setLoading(false);
                 Alert.alert('사진은 최대 10장까지만 추가할 수 있습니다.');
                 return;
             }
@@ -149,16 +152,20 @@ const ItemUploadPage = ({ navigation }) => {
 
             if (resizedImages.length === 0) {
                 Alert.alert('모든 이미지가 용량 초과로 제외되었습니다.');
+                setLoading(false);
                 return;
             }
 
             setImages(prev => [...prev, ...resizedImages]);
+            setLoading(false);
         });
     };
 
     // 이미지 삭제
     const removeImage = (index) => {
+        setLoading(true);
         setImages(prev => prev.filter((_, i) => i !== index));
+        setLoading(false);
     };
 
 
@@ -497,8 +504,7 @@ const styles = StyleSheet.create({
     },
     header: {
         position: 'absolute', top: 0, left: 0, right: 0,
-        height: HEADER_HEIGHT + STATUS_BAR_HEIGHT,
-        paddingTop: STATUS_BAR_HEIGHT,
+        height: HEADER_HEIGHT,
         flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
         paddingHorizontal: 16,
         backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#ccc',

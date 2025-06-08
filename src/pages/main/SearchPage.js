@@ -11,11 +11,13 @@ import {
     ActivityIndicator
 } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
+import FIcon from 'react-native-vector-icons/Feather';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import Config from 'react-native-config';
 import AppText from '../../components/AppText';
+import SafeTopWrapper from '../../components/SafeTopWrapper';
 
 const SearchPage = () => {
     const apiUrl = Config.API_URL;
@@ -114,64 +116,63 @@ const SearchPage = () => {
                 <AppText style={styles.recentKeyword}>{item}</AppText>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => handleDeleteKeyword(item)}>
-                <Icon name="times" size={16} color="#aaa" />
+                <FIcon name="x" size={16} color="#aaa" />
               </TouchableOpacity>
         </View>
     );
 
     return (
-        <View style={styles.container}>
-            {/* 상단 검색바 */}
-            <View style={styles.searchHeader}>
-                <TouchableOpacity onPress={() => navigation.goBack()}>
-                    <Icon name="angle-left" size={30} color="#000" />
-                </TouchableOpacity>
-                <TextInput
-                    style={styles.searchInput}
-                    placeholder="검색어를 입력하세요"
-                    value={keyword}
-                    onChangeText={setKeyword}
-                    returnKeyType="search"
-                    onSubmitEditing={handleSearch}
-                    autoFocus
-                />
-                <TouchableOpacity onPress={() => navigation.goBack()}>
-                    <AppText style={styles.searchBtn}>닫기</AppText>
-                </TouchableOpacity>
-            </View>
-
-            {/* 최근 검색어 */}
-            <View style={styles.recentHeader}>
-                <AppText style={styles.recentTitle}>최근 검색어</AppText>
-                {recentSearches.length > 0 && (
-                    <TouchableOpacity onPress={clearAll}>
-                        <AppText style={styles.clearAll}>전체 삭제</AppText>
+        <SafeTopWrapper>
+            <View style={styles.container}>
+                {/* 상단 검색바 */}
+                <View style={styles.searchHeader}>
+                    <TouchableOpacity onPress={() => navigation.goBack()}>
+                        <Icon name="angle-left" size={30} color="#000" />
                     </TouchableOpacity>
+                    <TextInput
+                        style={styles.searchInput}
+                        placeholder="검색어를 입력하세요"
+                        value={keyword}
+                        onChangeText={setKeyword}
+                        returnKeyType="search"
+                        onSubmitEditing={handleSearch}
+                        autoFocus
+                    />
+                    <TouchableOpacity onPress={() => navigation.goBack()}>
+                        <AppText style={styles.searchBtn}>닫기</AppText>
+                    </TouchableOpacity>
+                </View>
+
+                {/* 최근 검색어 */}
+                <View style={styles.recentHeader}>
+                    <AppText style={styles.recentTitle}>최근 검색어</AppText>
+                    {recentSearches.length > 0 && (
+                        <TouchableOpacity onPress={clearAll}>
+                            <AppText style={styles.clearAll}>전체 삭제</AppText>
+                        </TouchableOpacity>
+                    )}
+                </View>
+
+                <FlatList
+                    data={recentSearches}
+                    keyExtractor={(item, index) => `${item}-${index}`}
+                    renderItem={renderItem}
+                    contentContainerStyle={{ paddingHorizontal: 12 }}
+                />
+                {loading && (
+                    <View style={styles.spinnerWrapper}>
+                        <ActivityIndicator size="large" color="#6495ED" />
+                    </View>
                 )}
             </View>
-
-            <FlatList
-                data={recentSearches}
-                keyExtractor={(item, index) => `${item}-${index}`}
-                renderItem={renderItem}
-                contentContainerStyle={{ paddingHorizontal: 12 }}
-            />
-            {loading && (
-                <View style={styles.spinnerWrapper}>
-                    <ActivityIndicator size="large" color="#6495ED" />
-                </View>
-            )}
-
-        </View>
+        </SafeTopWrapper>
     );
 };
-
-const HEADER_HEIGHT = 48;  // 원하는 고정 높이
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#fff' },
     searchHeader: {
-        marginTop: HEADER_HEIGHT,
+        // marginTop: HEADER_HEIGHT,
         flexDirection: 'row',
         alignItems: 'center',
         padding: 12,
@@ -180,13 +181,14 @@ const styles = StyleSheet.create({
     },
     searchInput: {
         flex: 1,
-        marginHorizontal: 12,
+        marginHorizontal: 15,
         borderBottomWidth: 1,
         borderColor: '#ccc',
         borderWidth: 1,
         borderRadius: 10,
         paddingLeft: 10,
-        height: 40,
+        height: 45,
+        backgroundColor: '#f5f5f5',
     },
     searchBtn: { color: '#6495ED', fontSize: 16 },
     recentHeader: {
