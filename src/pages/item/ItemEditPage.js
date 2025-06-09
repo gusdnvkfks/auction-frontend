@@ -46,6 +46,9 @@ const ItemEditPage = ({ navigation, route }) => {
 
     const [pickerType, setPickerType] = useState("");
 
+    // 기존에 등록된 이미지들 x누르면 배열에서 삭제해줌
+    const [existingImages, setExistingImages] = useState([]);
+
     const toastOptions = {
         position: 'bottom',
         bottomOffset: 120,
@@ -80,6 +83,9 @@ const ItemEditPage = ({ navigation, route }) => {
                     fileName: img.url.split('/').pop(),
                     type: 'image/jpeg'
                 })));
+
+                setExistingImages(item.images.map(img => img.url));
+                
                 
                 const compareTime = new Date();
                 if (startDate > compareTime) {
@@ -154,7 +160,14 @@ const ItemEditPage = ({ navigation, route }) => {
     };
 
     const removeImage = (index) => {
+        // 이미존재하는 이미지배열에서 삭제해주기
+        const removedImage = images[index];
+        
         setImages(prev => prev.filter((_, i) => i !== index));
+
+        if(existingImages.includes(removedImage.uri)) {
+            setExistingImages(prev => prev.filter(url => url !== removedImage.uri));
+        }
     };
 
     const formatCurrencyInput = (text) => {
@@ -166,7 +179,7 @@ const ItemEditPage = ({ navigation, route }) => {
     };
 
     const handleSubmitEdit = async () => {
-        setLoading(true);
+        // setLoading(true);
         const isValid = Boolean(title.trim() && description.trim() && startPrice.trim());
 
         if (!isValid) {
@@ -186,6 +199,13 @@ const ItemEditPage = ({ navigation, route }) => {
         formData.append('buyNowPrice', Number(buyNowPrice.replace(/,/g, '')));
         formData.append('isBidUnit', bidIncrement === '' || bidIncrement === '0' ? 0 : 1);
 
+        (existingImages || []).forEach(url => {
+            if (typeof url === 'string' && url.trim().startsWith('http')) {
+                formData.append('existingImageUrls', url);
+            } else {
+                console.warn('[formData] 잘못된 existingImage url 제거됨:', url);
+            }
+        });
 
         images.forEach((img, i) => {
             formData.append('images', {
@@ -206,9 +226,6 @@ const ItemEditPage = ({ navigation, route }) => {
                 }
             );
 
-            console.log(res);
-            return;
-
             if (res.data.result === 'success') {
                 Toast.show({ ...toastOptions, type: 'success', text1: '수정 완료되었습니다.' });
                 navigation.goBack();
@@ -216,6 +233,7 @@ const ItemEditPage = ({ navigation, route }) => {
                 Toast.show({ ...toastOptions, type: 'error', text1: '수정에 실패했습니다.' });
             }
         } catch (err) {
+            Alert.alert(JSON.stringify(err));
             console.error(err);
             Toast.show({ ...toastOptions, type: 'error', text1: '수정 중 오류가 발생했습니다.' });
         } finally {
@@ -279,7 +297,7 @@ const ItemEditPage = ({ navigation, route }) => {
                 <TouchableOpacity onPress={() => navigation.goBack()}>
                     <Ionicons name="close" size={24} color="#000" />
                 </TouchableOpacity>
-                <AppText style={styles.headerTitle}>내 물건 경매</AppText>
+                <AppText style={styles.headerTitle}>내 경매 상품 수정</AppText>
                 <TouchableOpacity>
                     {/* <AppText style={styles.headerBtn}>임시저장</AppText> */}
                 </TouchableOpacity>
@@ -439,8 +457,7 @@ const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#fff' },
     header: {
         position: 'absolute', top: 0, left: 0, right: 0,
-        height: HEADER_HEIGHT + STATUS_BAR_HEIGHT,
-        paddingTop: STATUS_BAR_HEIGHT,
+        height: HEADER_HEIGHT,
         flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
         paddingHorizontal: 16,
         backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#ccc',
