@@ -115,7 +115,6 @@ const LoginPage = ({ navigation }) => {
 
     // 인증번호 발송 함수
     const requestPhoneCertify = async () => {
-        Alert.alert("apiUrl : ", apiUrl);
         try {
             const res = await axios.post(`${apiUrl}/api/phone-certify/send`, 
                 {

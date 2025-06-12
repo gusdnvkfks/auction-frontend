@@ -1,6 +1,6 @@
 // src/pages/main/HomePage.js
 
-import React, { useContext, useState, useEffect, useCallback } from 'react';
+import React, { useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { Text, StyleSheet, View, Alert, FlatList, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
 import AuctionItem from '../../components/AuctionItem';
 import Icon from 'react-native-vector-icons/FontAwesome';
@@ -15,11 +15,14 @@ import AppText from '../../components/AppText';
 import { AuthContext } from '../../contexts/AuthContext';
 
 const HomePage = () => {
-    // API URL
     const apiUrl = Config.API_URL;
-
     const route = useRoute();
+    const navigation = useNavigation();
+    const { token } = useContext(AuthContext);
+
     const [searchKeyword, setSearchKeyword] = useState(route.params?.searchKeyword || '');
+    const [categories, setCategories] = useState([]);   // 카테고리 목록록
+    const [selectedCategory, setSelectedCategory] = useState(0); // 카테고리 선택 상태
 
     const [items, setItems] = useState([]);
     const [page, setPage] = useState(1);
@@ -27,11 +30,38 @@ const HomePage = () => {
     const [hasMore, setHasMore] = useState(true);
     const [cursor, setCursor] = useState(null);
 
-    const { token } = useContext(AuthContext);
+    const categoryData = useMemo(() => [
+        { id: 0, name: '전체' },
+        ...categories,
+        { id: -1, name: '더보기' }
+    ], [categories]);
+
+    // 카테고리 호출
+    useEffect(() => {
+        getCategoryList();
+    }, []);
+
+    const getCategoryList = async () => {
+        try {
+            const res = await axios.get(`${apiUrl}/api/category`, {
+                params: {
+                    mode: "main"
+                },
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
+            if(res.data.result === "success") {
+                setCategories(res.data.categories);
+            }
+        } catch (error) {
+            console.log(error);
+        }
+    }
     
     useEffect(() => {
         getItemList();
-    }, [page]);
+    }, [page, selectedCategory]);
 
     useFocusEffect(
         useCallback(() => {
@@ -40,7 +70,8 @@ const HomePage = () => {
             setCursor(null);
             setHasMore(true);
             getItemList();
-        }, [searchKeyword])
+            setLoading(false);  // 혹시 남아있을 loading 상태 초기화
+        }, [searchKeyword, selectedCategory])
     );
 
     const getItemList = async () => {
@@ -58,6 +89,7 @@ const HomePage = () => {
                     page,
                     searchKeyword,
                     ...(cursor ? { cursor } : {}),
+                    ...(selectedCategory !== 0 ? { categoryId: selectedCategory } : {}),
                 },
                 headers: {
                     Authorization: `Bearer ${token}`,
@@ -112,8 +144,6 @@ const HomePage = () => {
         );
     }
 
-    const navigation = useNavigation();
-
     const goItemUpload = () => {
         const token = AsyncStorage.getItem("accessToken");
         if(token) {
@@ -129,6 +159,33 @@ const HomePage = () => {
         setHasMore(true);
         setCursor(null);
         setSearchKeyword(''); // ✅ 이 한 줄이 핵심
+    };
+
+    const renderCategoryItem = ({ item }) => {
+        const selectedCategoryHandle = () => {
+            if (item.id === -1) {
+                // -1이면 카테고리 목록 페이지로 이동
+                navigation.navigate("CategoryPage");
+            } else {
+                setSelectedCategory(item.id);
+            }
+        }
+        return (
+            <TouchableOpacity
+                style={[
+                    styles.categoryButton,
+                    selectedCategory === item.id && styles.selectedCategoryButton
+                ]}
+                onPress={selectedCategoryHandle}
+            >
+                <Text style={[
+                    styles.categoryText,
+                    selectedCategory === item.id && styles.selectedCategoryText
+                ]}>
+                    {item.name}
+                </Text>
+            </TouchableOpacity>
+        )
     };
 
     return (
@@ -157,10 +214,23 @@ const HomePage = () => {
                     </TouchableOpacity>
                 )}
             </View>
-            <View>
-                <Text>카테고리영역</Text>
+            {/* 카테고리 영역 */}
+            <View style={styles.categoryWrapper}>
+                <FlatList
+                    data={categoryData}
+                    renderItem={renderCategoryItem}
+                    keyExtractor={item => item.id.toString()}
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                />
             </View>
-            <FlatList contentContainerStyle={styles.scrollContent}
+            {/* 경매 물품 영역 */}
+            <FlatList 
+                contentContainerStyle={
+                    items.length === 0 
+                    ? [styles.scrollContent, styles.noItemContent] 
+                    : styles.scrollContent
+                }
                 data={items}
                 renderItem={renderItem}
                 keyExtractor={item => item.id.toString()}
@@ -197,11 +267,12 @@ const styles = StyleSheet.create({
         padding: 12,
         paddingTop: HEADER_HEIGHT,
     },
+    noItemContent: {
+        paddingTop: 0,  // 원하는 위치로 조정
+    },
     searchContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        // paddingTop: 16,
-        // marginRight: 20,
     },
     searchTouchable: {
         flexDirection: 'row',
@@ -223,6 +294,31 @@ const styles = StyleSheet.create({
     },
     searchIcon: {
         marginRight: 8,
+    },
+    categoryWrapper: {
+        paddingVertical: 12,
+        paddingHorizontal: 10
+    },
+    categoryButton: {
+        paddingHorizontal: 16,
+        paddingVertical: 6,
+        borderRadius: 20,
+        backgroundColor: '#f2f2f2',
+        marginRight: 7,
+        borderWidth: 1,
+        borderColor: '#e0e0e0',
+    },
+    selectedCategoryButton: {
+        backgroundColor: '#6495ED',
+        borderColor: '#6495ED',
+    },
+    categoryText: {
+        fontSize: 10,
+        color: '#333',
+    },
+    selectedCategoryText: {
+        color: '#fff',
+        fontWeight: 'bold',
     },
     fakeInput: {
         color: '#888',
