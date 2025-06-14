@@ -64,6 +64,19 @@ const ItemUploadPage = ({ navigation }) => {
     const [pickerType, setPickerType] = useState("");
     const [loading, setLoading] = useState(false);
 
+    const [selectedCategory, setSelectedCategory] = useState(null);
+    const [categoryName, setCategoryName] = useState("");
+    const categoryOptions = [
+        { id: 1, name: '여성의류' },
+        { id: 2, name: '남성의류' },
+        { id: 3, name: '신발' },
+        { id: 4, name: '가방/지갑' },
+        { id: 5, name: '디지털' },
+        { id: 6, name: '가전제품' },
+        { id: 7, name: '스포츠/레저' },
+        { id: 8, name: '도서/티켓/문구' },
+    ];
+
     const toastOptions = {
         position: 'bottom',
         bottomOffset: 120,
@@ -175,8 +188,6 @@ const ItemUploadPage = ({ navigation }) => {
         description.trim().length > 0 ||
         images.length > 0
     );
-
-    const handleTempSave = () => {};
 
     const itemUpload = async () => {
         setLoading(true);
@@ -312,39 +323,55 @@ const ItemUploadPage = ({ navigation }) => {
         return numeric;
     }
 
+    const goCategoryPicker = () => {
+        navigation.navigate("CategoryPicker");
+    }
+
 
     return (
         <SafeTopWrapper style={styles.container}>
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()}>
+                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.closeButton}>
                     <Ionicons name="close" size={24} color="#000" />
                 </TouchableOpacity>
                 <AppText style={styles.headerTitle}>내 물건 경매</AppText>
-                <TouchableOpacity onPress={handleTempSave} disabled={!isDirty}>
-                    <AppText style={[styles.headerBtn, !isDirty && styles.headerBtnDisabled]}>임시저장</AppText>
-                </TouchableOpacity>
             </View>
 
+
             <ScrollView style={styles.scrollArea} contentContainerStyle={styles.contentContainer}>
+                {/* 안내문구 추가 */}
+                <View style={styles.topNoticeBox}>
+                    <Ionicons name="information-circle-outline" size={18} color="#6495ED" style={{ marginRight: 6 }} />
+                    <Text style={styles.topNoticeText}>
+                        판매금지 물품, 광고, 반복된 게시글은 경고 없이 삭제될 수 있습니다.
+                    </Text>
+                </View>
                 {/* 사진 추가 */}
-                <AppText style={styles.label}>
-                    <RequiredLabel>사진 추가</RequiredLabel>
-                </AppText>
-                <View style={styles.imageContainer}>
+                <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.imageContainer}
+                >
+                    {/* 사진 추가 버튼 */}
                     {images.length < 10 && (
                         <TouchableOpacity style={styles.addButton} onPress={pickImage}>
-                            <AppText style={styles.addButtonText}>+</AppText>
+                            {/* <AppText style={styles.addButtonText}>+</AppText> */}
+                            <Ionicons name="camera-outline" size={28} color="#6495ED" />
+                            <Text style={styles.imageCountText}>{images.length}/10</Text>
                         </TouchableOpacity>
                     )}
 
+                    {/* 이미지 리스트 */}
                     {images.map((img, i) => (
                         <View key={i} style={styles.imageWrapper}>
                             <Image source={{ uri: img.uri }} style={styles.preview} />
+                            {/* 대표사진 라벨 */}
                             {i === 0 && (
                                 <View style={styles.labelTag}>
                                     <Text style={styles.labelText}>대표 사진</Text>
                                 </View>
                             )}
+                            
                             <TouchableOpacity
                                 style={styles.deleteButton}
                                 onPress={() => removeImage(i)}
@@ -353,10 +380,108 @@ const ItemUploadPage = ({ navigation }) => {
                             </TouchableOpacity>
                         </View>
                     ))}
+                </ScrollView>
+
+                {/* 상품명 */}
+                <View style={styles.inputRow}>
+                    <View style={styles.labelBox}>
+                        <Text style={styles.rowLabel}>상품명</Text>
+                    </View>
+                    <TextInput
+                        style={styles.rowInput}
+                        value={title}
+                        onChangeText={setTitle}
+                        placeholder="상품명을 입력해 주세요."
+                    />
+                </View>
+
+                {/* 카테고리 */}
+                <View style={styles.inputRow}>
+                    <View style={styles.labelBox}>
+                        <Text style={styles.rowLabel}>카테고리</Text>
+                    </View>
+                    <TouchableOpacity style={{ flex: 1 }} onPress={goCategoryPicker}>
+                        <TextInput
+                            style={styles.rowInput}
+                            placeholder="카테고리를 선택해 주세요."
+                            value={categoryName}
+                            editable={false}  // 직접 입력 못 하게 막음
+                            pointerEvents="none" // 안드로이드 터치 충돌 방지용
+                        />
+                    </TouchableOpacity>
+                </View>
+
+                {/* 시작가 */}
+                <View style={styles.inputRow}>
+                    <View style={styles.labelBox}>
+                        <Text style={styles.rowLabel}>시작가</Text>
+                    </View>
+                    <TextInput
+                        style={styles.rowInput}
+                        value={startPrice.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                        onChangeText={(text) => setStartPrice(formatCurrencyInput(text))}
+                        keyboardType="number-pad"
+                        placeholder="시작가를 입력해주세요."
+                    />
+                </View>
+
+                {/* 경매옵션 */}
+                <View style={styles.inputRow}>
+                    <View style={styles.labelBox}>
+                        <Text style={styles.rowLabel}>경매옵션</Text>
+                    </View>
+                    <TouchableOpacity style={{ flex: 1 }}>
+                        <TextInput
+                            style={styles.rowInput}
+                            placeholder="경매 옵션을 선택해 주세요."
+                            editable={false}  // 직접 입력 못 하게 막음
+                            pointerEvents="none" // 안드로이드 터치 충돌 방지용
+                        />
+                    </TouchableOpacity>
+                </View>
+
+                {/* 입찰단위 */}
+                {/* <View style={styles.inputRow}>
+                    <Text style={styles.rowLabel}>입찰단위</Text>
+                    <TextInput
+                        style={styles.rowInput}
+                        value={bidIncrement.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                        onChangeText={(text) => setBidIncrement(formatCurrencyInput(text))}
+                        keyboardType="number-pad"
+                        placeholder="₩"
+                    />
+                </View> */}
+
+                {/* 즉시구매가 */}
+                {/* <View style={styles.inputRow}>
+                    <Text style={styles.rowLabel}>즉시구매가</Text>
+                    <TextInput
+                        style={styles.rowInput}
+                        value={buyNowPrice.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                        onChangeText={(text) => setBuyNowPrice(formatCurrencyInput(text))}
+                        keyboardType="number-pad"
+                        placeholder="₩"
+                    />
+                </View> */}
+
+                {/* 설명 영역 (라벨 없이 전체 박스처럼) */}
+                <View style={styles.descriptionWrapper}>
+                    {description === '' && (
+                        <Text style={styles.placeholderText}>
+                            - 경매할 물건의 설명을 입력해 주세요.{"\n"}
+                            - 제품명, 물건의 상태, 사용 기간 등
+                        </Text>
+                    )}
+                    <TextInput
+                        style={styles.descriptionInput}
+                        value={description}
+                        onChangeText={setDescription}
+                        multiline
+                    />
                 </View>
 
                 {/* 경매 시작 시간 */}
-                <AppText style={styles.label}>경매 시작 시간</AppText>
+                {/* <AppText style={styles.label}>경매 시작 시간</AppText>
                 <View style={styles.optionRow}>
                     {START_OPTIONS.map(opt => (
                         <TouchableOpacity
@@ -369,17 +494,17 @@ const ItemUploadPage = ({ navigation }) => {
                         </Text>
                         </TouchableOpacity>
                     ))}
-                </View>
+                </View> */}
                 
                 {/* 선택한 경매 시간 보여주기 */}
-                {startDateString !== "" && (
+                {/* {startDateString !== "" && (
                     <AppText>
                         선택한 시작 시간 : {startDateString}
                     </AppText>
-                )}
+                )} */}
 
                 {/* 경매 마감 시간 */}
-                <AppText style={styles.label}>경매 마감 시간</AppText>
+                {/* <AppText style={styles.label}>경매 마감 시간</AppText>
                     <View style={styles.optionRow}>
                     {END_OPTIONS.map(opt => (
                         <TouchableOpacity
@@ -392,16 +517,16 @@ const ItemUploadPage = ({ navigation }) => {
                         </Text>
                         </TouchableOpacity>
                     ))}
-                </View>
+                </View> */}
 
                 {/* 선택한 경매 시간 보여주기 */}
-                {endDateString !== "" && (
+                {/* {endDateString !== "" && (
                     <AppText>
                         선택한 마감 시간 : {endDateString}
                     </AppText>
-                )}
+                )} */}
 
-                <DateTimeModal
+                {/* <DateTimeModal
                     title={pickerType}
                     visible={showStartPicker || showEndPicker}
                     initialDate={startDate}
@@ -439,30 +564,10 @@ const ItemUploadPage = ({ navigation }) => {
                             setEndDateString(showEndDate);
                         }
                     }}
-                />
+                /> */}
 
                 {/* 제목 등 나머지 폼 */}
-                <AppText style={styles.label}>
-                    <RequiredLabel>제목</RequiredLabel>
-                </AppText>
-                <TextInput style={styles.input} placeholder="타이틀을 작성해 주세요." value={title} onChangeText={setTitle} />
-                <AppText style={styles.label}>
-                    <RequiredLabel>설명</RequiredLabel>
-                </AppText>
-                <TextInput style={[styles.input, styles.textArea]} placeholder={"사람들에게 입찰을 받을 수 있게 신뢰할 수 있는 내용을\n작성해 주세요.\n\n등록 금지 물품은 제한되거나, 삭제될 수 있어요."} value={description} onChangeText={setDescription} multiline />
-                <AppText style={styles.label}>
-                    <RequiredLabel>시작가 (₩)</RequiredLabel>
-                </AppText>
-                <TextInput
-                    style={styles.input}
-                    placeholder="예: 10,000"
-                    value={startPrice.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                    onChangeText={(text) => {
-                        const formattedStartPrice = formatCurrencyInput(text);
-                        setStartPrice(formattedStartPrice);
-                    }}
-                    keyboardType="number-pad" />
-                <AppText style={styles.label}>입찰 단위 (₩)</AppText>
+                {/* <AppText style={styles.label}>입찰 단위 (₩)</AppText>
                 <TextInput
                     style={styles.input}
                     placeholder="예: 1,000"
@@ -481,7 +586,8 @@ const ItemUploadPage = ({ navigation }) => {
                         const formattedBuyNowPrice = formatCurrencyInput(text);
                         setBuyNowPrice(formattedBuyNowPrice)
                     }}
-                    keyboardType="number-pad" />
+                    keyboardType="number-pad"
+                /> */}
             </ScrollView>
 
             <View style={styles.footer}>
@@ -498,106 +604,185 @@ const ItemUploadPage = ({ navigation }) => {
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#fff'
-    },
     header: {
-        position: 'absolute', top: 0, left: 0, right: 0,
+        position: 'absolute',
+        left: 0,
+        right: 0,
         height: HEADER_HEIGHT,
-        flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+        flexDirection: 'row',
+        alignItems: 'center',
         paddingHorizontal: 16,
-        backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#ccc',
-        zIndex: 10, elevation: 10,
+        backgroundColor: '#fff',
+        zIndex: 10,
+        elevation: 0,
+        borderBottomWidth: 0,   // ✅ 줄 제거
     },
-    headerTitle: { fontSize: 18, fontWeight: '600' },
-    headerBtn: { fontSize: 16, color: '#000' },
-    headerBtnDisabled: { color: '#aaa' },
+    headerTitle: {
+        position: 'absolute',
+        left: 0,
+        right: 0,
+        textAlign: 'center',
+        fontSize: 18,
+        fontWeight: '600',
+    },
+    closeButton: {
+        position: 'absolute',
+        left: 16,
+        top: 0,
+        bottom: 0,
+        justifyContent: 'center',
+    },
     scrollArea: {
         flex: 1,
         backgroundColor: '#fff',
-        marginTop: STATUS_BAR_HEIGHT
     },
     contentContainer: {
         padding: 16,
         paddingBottom: FOOTER_HEIGHT + HOME_INDICATOR_HEIGHT + 40,
     },
-    label: { marginTop: 20, fontSize: 14, fontWeight: '500', marginBottom: 12 },
-    input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 4, padding: 8, marginTop: 4 },
-    textArea: { height: 100, textAlignVertical: 'top' },
+    // 경고 문구
+    topNoticeBox: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        backgroundColor: '#f0f4ff',
+        borderColor: '#c6d4f5',
+        borderWidth: 1,
+        borderRadius: 8,
+        padding: 10,
+        marginTop: STATUS_BAR_HEIGHT,
+    },
+    topNoticeText: {
+        fontSize: 12,
+        color: '#333',
+        lineHeight: 18,
+        flex: 1,
+    },
+    // 이미지
+    imageContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 8,
+        marginBottom: 5,
+        marginTop: 5
+    },
+    imageCountText: {
+        fontSize: 12,
+        color: '#ccc',
+        fontWeight: 'bold',
+    },
+    addButton: {
+        width: 70,
+        height: 70,
+        borderWidth: 1,
+        borderColor: '#6495ED',
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderRadius: 6,
+        marginRight: 10,
+        backgroundColor: '#fff',
+    },
+    imageWrapper: {
+        position: 'relative',
+        marginRight: 10,
+    },
+    preview: {
+        width: 70,
+        height: 70,
+        borderRadius: 6,
+        borderWidth: 1,
+        borderColor: '#ccc',
+    },
+    labelTag: {
+        position: 'absolute',
+        bottom: 0,
+        backgroundColor: '#6495ED',
+        paddingHorizontal: 5,
+        paddingVertical: 2,
+        borderRadius: 4,
+        width: "100%"
+    },
+    labelText: {
+        color: '#fff',
+        fontSize: 10,
+        fontWeight: 'bold',
+        textAlign: "center"
+    },
+    deleteButton: {
+        position: 'absolute',
+        top: -4,
+        right: -4,
+        backgroundColor: '#6495ED',
+        borderRadius: 10,
+        width: 18,
+        height: 18,
+        alignItems: 'center',
+    },
+    deleteButtonText: {
+        color: '#fff',
+        fontSize: 14,
+        fontWeight: 'bold',
+        bottom: 2
+    },
+    // 인풋창창
+    inputRowLarge: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        borderBottomWidth: 1,
+        borderColor: '#eee',
+    },
+    inputRow: {
+        flexDirection: 'column',  // ✅ 세로 배치
+        borderBottomWidth: 1,
+        borderColor: '#eee',
+        paddingVertical: 8,  // 조금 넓게
+    },
+    labelBox: {
+        width: "100%",  // ✅ 가로 전체
+        justifyContent: 'center',
+        alignItems: 'flex-start',  // 왼쪽 정렬
+        borderBottomWidth: 0,  // ✅ 이제 아래 선은 안씀
+    },
+    rowLabel: {
+        fontSize: 13,
+        color: '#333333',
+    },
+    rowInput: {
+        flex: 1,
+        fontSize: 12,
+        color: '#000',
+        paddingVertical: 10,
+    },
+    // 설명 영역
+    descriptionWrapper: {
+        marginTop: 16,
+        backgroundColor: '#f9f9f9',
+        borderTopWidth: 1,
+        borderBottomWidth: 1,
+        borderColor: '#eee',
+        padding: 12,
+    },
+    placeholderText: {
+        position: 'absolute',
+        top: 12,
+        left: 12,
+        right: 12,
+        color: '#999',
+        fontSize: 12,
+        lineHeight: 25,  // 원하는 lineHeight 적용 가능
+    },
+    descriptionInput: {
+        fontSize: 12,
+        color: '#000',
+        height: 180,
+        textAlignVertical: 'top',
+    },
+
     optionRow: { flexDirection: 'row', flexWrap: 'wrap', marginVertical: 8 },
     optionBtn: { paddingVertical: 6, paddingHorizontal: 12, borderWidth: 1, borderColor: '#ccc', borderRadius: 4, marginRight: 8, marginBottom: 8 },
     optionBtnActive: { backgroundColor: '#6495ED', borderColor: '#6495ED' },
     optionText: { fontSize: 12, color: '#000' },
     optionTextActive: { fontSize: 12, color: '#fff' },
     chosenDate: { fontSize: 14, color: '#333', marginBottom: 12 },
-
-    // 이미지
-    imageContainer: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        marginTop: 8,
-        paddingRight: 2,
-    },
-    addButton: {
-        width: 60,
-        height: 60,
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderWidth: 1,
-        borderColor: '#6495ED',
-        borderRadius: 4,
-        marginRight: 10,
-        marginBottom: 10
-    },
-    addButtonText: {
-        fontSize: 30,
-        fontWeight: '300'
-    },
-    imageWrapper: {
-        position: 'relative',
-        marginRight: 10,
-    },
-    labelTag: {
-        position: 'absolute',
-        bottom: 12,
-        left: 1,
-        backgroundColor: '#6495ED', // 하늘색
-        paddingHorizontal: 9,
-        paddingVertical: 2,
-        borderRadius: 4,
-        zIndex: 1,
-    },
-    labelText: {
-        color: 'white',
-        fontSize: 10,
-        fontWeight: 'bold',
-    },
-    preview: {
-        width: 60,
-        height: 60,
-        borderRadius: 8,
-        borderWidth: 1,           // ✅ 테두리 추가
-        borderColor: '#ccc',      // ✅ 연한 회색
-        backgroundColor: '#fff',  // ✅ 이미지 없을 때 대비용 (선택)
-    },
-    deleteButton: {
-        position: 'absolute',
-        top: -6,
-        right: -6,
-        backgroundColor: '#6495ED',
-        borderRadius: 12,
-        width: 18,
-        height: 18,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    deleteButtonText: {
-        color: '#fff',
-        fontSize: 10,
-        fontWeight: 'bold',
-    },
-
     // 모달
     modalBg: {
         flex: 1,
@@ -648,7 +833,6 @@ const styles = StyleSheet.create({
         left: 0,
         right: 0,
         height: FOOTER_HEIGHT + HOME_INDICATOR_HEIGHT + 24,
-        paddingBottom: HOME_INDICATOR_HEIGHT,
         backgroundColor: '#fff',
         borderTopWidth: 1,
         borderTopColor: '#ccc',

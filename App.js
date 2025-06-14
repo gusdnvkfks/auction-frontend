@@ -17,6 +17,7 @@ import LandingPage from './src/pages/common/LandingPage';
 import LocationPage from './src/pages/common/LocationPage';
 import ReportReasonPage from './src/pages/common/ReportReasonPage';
 import ReportConfirmPage from './src/pages/common/ReportConfirmPage';
+import CategoryPickerPage from './src/pages/common/CategoryPickerPage';
 // auth page
 import LoginPage from './src/pages/auth/LoginPage';
 import VerifyPage from './src/pages/auth/VerifyPage';
@@ -105,6 +106,7 @@ export default function App() {
                                 <Stack.Screen name="Location" component={LocationPage} />
                                 <Stack.Screen name="Report" component={ReportReasonPage} options={{ headerShown: false }} />
                                 <Stack.Screen name="ReportConfirm" component={ReportConfirmPage} options={{ headerShown: false }} />
+                                <Stack.Screen name="CategoryPicker" component={CategoryPickerPage} options={{ headerShown: false }} />
                                 <Stack.Screen name="Verify" component={VerifyPage} />
                                 <Stack.Screen name="TermsOfUse" component={TermsOfUsePage} />
                                 {/* <Stack.Screen name="Home" component={HomePage} options={{ headerShown: false }} /> */}

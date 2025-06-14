@@ -59,20 +59,47 @@ const HomePage = () => {
         }
     }
     
-    useEffect(() => {
-        getItemList();
-    }, [page, selectedCategory]);
+    // useEffect(() => {
+    //     getItemList();
+    // }, [page, selectedCategory]);
+
+    // useFocusEffect(
+    //     useCallback(() => {
+    //         setItems([]);
+    //         setPage(1);
+    //         setCursor(null);
+    //         setHasMore(true);
+    //         getItemList();
+    //         setLoading(false);  // 혹시 남아있을 loading 상태 초기화
+    //     }, [searchKeyword, selectedCategory])
+    // );
 
     useFocusEffect(
         useCallback(() => {
-            setItems([]);
-            setPage(1);
-            setCursor(null);
-            setHasMore(true);
-            getItemList();
-            setLoading(false);  // 혹시 남아있을 loading 상태 초기화
+            reset();
         }, [searchKeyword, selectedCategory])
     );
+
+    const reset = () => {
+        setItems([]);
+        setCursor(null);
+        setHasMore(true);
+        setLoading(false);
+
+        if(page !== 1) {
+            setPage(prev => {
+                // page가 1인 상태에서 또 reset된 경우 → 직접 getItemList 호출 (중복 방지 핵심)
+                getItemList();
+                return prev;
+            });
+        } else {
+            setPage(1);
+        }
+    };
+
+    useEffect(() => {
+        getItemList();
+    }, [page, selectedCategory]);
 
     const getItemList = async () => {
         // 더 불러올게 있는 지 확인
