@@ -4,14 +4,14 @@ import {
     TextInput,
     StyleSheet,
     ScrollView,
-    Alert,
     TouchableOpacity,
     Image,
     StatusBar,
     Platform,
     Text,
     PermissionsAndroid,
-    ActivityIndicator
+    ActivityIndicator,
+    KeyboardAvoidingView
 } from 'react-native';
 import mime from 'react-native-mime-types';
 import axios from 'axios';
@@ -19,12 +19,11 @@ import Config from 'react-native-config';
 import * as ImagePicker from 'react-native-image-picker';
 import AppText from '../../components/AppText';
 import AddButton from '../../components/AddButton';
-import RequiredLabel from '../../components/RequireLabel';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import DateTimeModal from '../../components/DateTimeModal';
 import RNFS from 'react-native-fs';
 import Toast from 'react-native-toast-message';
 import { AuthContext } from '../../contexts/AuthContext';
+import { ItemUploadContext } from '../../contexts/ItemUploadProvider';
 import ImageResizer from 'react-native-image-resizer';
 import SafeTopWrapper from '../../components/SafeTopWrapper';
 
@@ -35,47 +34,24 @@ const HOME_INDICATOR_HEIGHT = Platform.OS === 'ios' ? 34 : 0;
 const HEADER_HEIGHT = 48;
 const FOOTER_HEIGHT = 56;
 
-const START_OPTIONS = ['등록즉시', '1일뒤', '직접입력'];
-const END_OPTIONS = ['수동마감', '3일뒤', '1주일뒤', '직접입력'];
-
 const MAX_IMAGE_SIZE_MB = 2;
 
 const ItemUploadPage = ({ navigation }) => {
     const apiUrl = Config.API_URL;
     const { token } = useContext(AuthContext);
+    // 전역으로 관리
+    const { 
+        title, setTitle, 
+        description, setDescription, 
+        startPrice, setStartPrice,
+        images, setImages,
+        mainCategoryId, setMainCategoryId,
+        subCategoryId, setSubCategoryId,
+        selectedCategory, setSelectedCategory,
+        auctionOption, setAuctionOption
+    } = useContext(ItemUploadContext);
 
-    const [title, setTitle] = useState('');
-    const [description, setDescription] = useState('');
-    const [startPrice, setStartPrice] = useState('');
-    const [bidIncrement, setBidIncrement] = useState('');
-    const [buyNowPrice, setBuyNowPrice] = useState('');
-    const [images, setImages] = useState([]);
-
-    const [startOption, setStartOption] = useState('등록즉시');
-    const [startDate, setStartDate] = useState(new Date());
-    const [showStartPicker, setShowStartPicker] = useState(false);
-    const [startDateString, setStartDateString] = useState("");
-    
-    const [endOption, setEndOption] = useState('수동마감');
-    const [endDate, setEndDate] = useState(() => new Date('9999-12-31T23:59:59'));
-    const [showEndPicker, setShowEndPicker] = useState(false);
-    const [endDateString, setEndDateString] = useState("");
-
-    const [pickerType, setPickerType] = useState("");
     const [loading, setLoading] = useState(false);
-
-    const [selectedCategory, setSelectedCategory] = useState(null);
-    const [categoryName, setCategoryName] = useState("");
-    const categoryOptions = [
-        { id: 1, name: '여성의류' },
-        { id: 2, name: '남성의류' },
-        { id: 3, name: '신발' },
-        { id: 4, name: '가방/지갑' },
-        { id: 5, name: '디지털' },
-        { id: 6, name: '가전제품' },
-        { id: 7, name: '스포츠/레저' },
-        { id: 8, name: '도서/티켓/문구' },
-    ];
 
     const toastOptions = {
         position: 'bottom',
@@ -102,9 +78,15 @@ const ItemUploadPage = ({ navigation }) => {
 
     // 이미지 선택
     const pickImage = async () => {
+        setLoading(true);
         const hasPermission = await requestImagePermission();
         if(!hasPermission) {
-            Alert.alert('권한 거부됨', '이미지를 선택하려면 권한이 필요합니다.');
+            setLoading(false);
+            Toast.show({
+                ...toastOptions,
+                type: 'error',
+                text1: '권한 거부됨 : 이미지를 선택하려면 권한이 필요합니다.'
+            });
             return;
         }
 
@@ -116,7 +98,6 @@ const ItemUploadPage = ({ navigation }) => {
         };
         
         ImagePicker.launchImageLibrary(options, async (response) => {
-            setLoading(true);
             if(response.didCancel || response.errorCode || !response.assets?.length) {
                 // console.log('이미지 선택 취소 또는 오류');
                 setLoading(false);
@@ -128,7 +109,11 @@ const ItemUploadPage = ({ navigation }) => {
         
             if(totalCount > 10) {
                 setLoading(false);
-                Alert.alert('사진은 최대 10장까지만 추가할 수 있습니다.');
+                Toast.show({
+                    ...toastOptions,
+                    type: 'error',
+                    text1: '사진은 최대 10장까지만 추가할 수 있습니다.',
+                });
                 return;
             }
 
@@ -149,7 +134,11 @@ const ItemUploadPage = ({ navigation }) => {
                     const stat = await RNFS.stat(path);
                     const sizeMB = stat.size / (1024 * 1024);
                     if (sizeMB > MAX_IMAGE_SIZE_MB) {
-                        Alert.alert('압축 후에도 용량 초과', `${img.fileName || '이미지'}는 제외됩니다.`);
+                        Toast.show({
+                            ...toastOptions,
+                            type: 'error',
+                            text1: '압축 후에도 용량 초과 ' + `${img.fileName || '이미지'}는 제외됩니다.`,
+                        });
                         continue;
                     }
 
@@ -164,7 +153,11 @@ const ItemUploadPage = ({ navigation }) => {
             }
 
             if (resizedImages.length === 0) {
-                Alert.alert('모든 이미지가 용량 초과로 제외되었습니다.');
+                Toast.show({
+                    ...toastOptions,
+                    type: 'error',
+                    text1: '모든 이미지가 용량 초과로 제외되었습니다.',
+                });
                 setLoading(false);
                 return;
             }
@@ -199,7 +192,21 @@ const ItemUploadPage = ({ navigation }) => {
         );
 
         if(!isValid) {
-            Alert.alert("사진, 제목, 설명, 시작가는 필수 항목입니다.");
+            Toast.show({
+                ...toastOptions,
+                type: 'error',
+                text1: '사진, 제목, 설명, 시작가는 필수 항목입니다.',
+            });
+            setLoading(false);
+            return;
+        }
+
+        if (!auctionOption) {
+            Toast.show({
+                ...toastOptions,
+                type: 'error',
+                text1: '경매 옵션을 선택해 주세요.',
+            });
             setLoading(false);
             return;
         }
@@ -207,13 +214,15 @@ const ItemUploadPage = ({ navigation }) => {
         const formData = new FormData();
         formData.append('title', title);
         formData.append('description', description);
-        formData.append('startTime', startDate.toISOString());
-        formData.append('endTime', endDate.toISOString());
-        formData.append('startPrice', Number(startPrice.replace(/,/g, '')));
-        formData.append('bidUnit', Number(bidIncrement.replace(/,/g, '')));
-        formData.append('buyNowPrice', Number(buyNowPrice.replace(/,/g, '')));
-        formData.append('isBidUnit', bidIncrement === '' || bidIncrement === 0 ? 0 : 1);
+        formData.append('productState', auctionOption.productState);
+        formData.append('startPrice', Number(startPrice.replace(/,/g, '')))
+        formData.append('endOption', auctionOption.endOption);
+        formData.append('endTime', auctionOption.endDate);
+        formData.append('bidUnit', Number(auctionOption.bidUnit.replace(/,/g, '')));
+        formData.append('buyNowPrice', Number(auctionOption.buyNowPrice.replace(/,/g, '')));
+        formData.append('isBidUnit', auctionOption.bidUnit === '' || auctionOption.bidUnit === 0 ? 0 : 1);
         formData.append('status', 1);
+        formData.append('categoryId', subCategoryId);
 
         images.forEach((img, i) => {
             formData.append('images', {
@@ -253,7 +262,7 @@ const ItemUploadPage = ({ navigation }) => {
             
         } catch (error) {
             // console.log('요청실패');
-            // console.log(error);
+            console.log(error);
             Toast.show({
                 ...toastOptions,
                 type: 'error',
@@ -264,56 +273,7 @@ const ItemUploadPage = ({ navigation }) => {
         }
     };
 
-    // 경매 시작시간 선택할 때
-    const onPressStartOption = (opt) => {
-        setStartOption(opt);
-        setStartDateString("");
-        if(opt === '직접입력') {
-            // 모달창 띄워주기
-            setPickerType("경매 시작시간");
-            setShowStartPicker(true);
-        }else {
-            setShowStartPicker(false);
-            setPickerType("");
-            // 등록즉시 / 24시간후 로직 예시
-            setStartDate(
-                opt === '등록즉시' ? new Date() : new Date(Date.now() + 24 * 60 * 60 * 1000)
-            );
-        }
-    };
-
-    // 경매 마감시간 선택할 때
-    const onPressEndOption = (opt) => {
-        setEndOption(opt);
-        setEndDateString("");
-        if(opt === '직접입력') {
-            // 모달창 띄워주기기
-            setShowEndPicker(true);
-            setPickerType("경매 마감시간");
-        }else {
-            setShowEndPicker(false);
-            setPickerType("");
-            if(opt === '3일후') {
-                setEndDate(new Date(Date.now() + 3 * 24 * 60 * 60 * 1000));
-            }else if (opt === '1주일후') {
-                setEndDate(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
-            }else if (opt === '1개월후') {
-                const tmp = new Date();
-                tmp.setMonth(tmp.getMonth() + 1);
-                setEndDate(tmp);
-            }else {
-                // '수동마감'
-                setEndDate(new Date('9999-12-31T23:59:59'));
-            }
-        }
-    };
-
-    const formatDate = (date) => {
-        const pad = (n) => String(n).padStart(2, '0');
-        return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ` +
-               `${pad(date.getHours())}:${pad(date.getMinutes())}`;
-    };
-
+    // 통화 포맷
     const formatCurrencyInput = (text) => {
         var numeric = text.replace(/[^0-9]/g, '');
         if(numeric.startsWith('0') && numeric.length > 1) {
@@ -323,282 +283,235 @@ const ItemUploadPage = ({ navigation }) => {
         return numeric;
     }
 
+    // 카테고리 선택 페이지
     const goCategoryPicker = () => {
         navigation.navigate("CategoryPicker");
     }
 
+    // 옵션 선택 페이지
+    const goOptionPage = () => {
+        navigation.navigate("ItemOption");
+    }
+
+    // 옵션 선택 페이지에서 선택한 옵션들
+    const getAuctionOptionText = () => {
+        if(!auctionOption) return "";
+
+        const {
+            productState = '',
+            endOption = '',
+            bidUnit = '',
+            buyNowPrice = ''
+        } = auctionOption;
+
+        let result = "";
+
+        if (productState) result += productState;
+        if (endOption) result += (result ? ' / ' : '') + endOption;
+        if (bidUnit) result += (result ? ' / ' : '') + bidUnit;
+        if (buyNowPrice) result += (result ? ' / ' : '') + buyNowPrice;
+
+        return result;
+    }
+
+    // 임시 저장
+    const handleTemporarySave = async () => {
+        setLoading(true);
+        try {
+            const formData = new FormData();
+
+            formData.append('title', title);
+            formData.append('description', description);
+            formData.append('productState', auctionOption?.productState);
+            formData.append('endOption', auctionOption?.endOption);
+            formData.append('endTime', auctionOption?.endDate);
+            formData.append('startPrice', Number(startPrice.replace(/,/g, '')));
+            formData.append('bidUnit', Number(auctionOption?.bidUnit ?? 0));
+            formData.append('buyNowPrice', Number(auctionOption?.buyNowPrice ?? 0));
+            formData.append('isBidUnit', auctionOption?.bidUnit ? 1 : 0);
+            formData.append('categoryId', subCategoryId);
+            formData.append('status', 2); // ✅ 이게 핵심
+
+            // ✅ 이미지들도 추가 (기존과 동일하게)
+            images.forEach((img, i) => {
+                formData.append('images', {
+                    uri: Platform.OS === 'ios' ? img.uri.replace('file://', '') : img.uri,
+                    name: img.fileName || `image_${i}.jpg`,
+                    type: img.type || mime.lookup(img.uri) || 'image/jpeg',
+                });
+                formData.append('isThumbnail', i === 0 ? '1' : '0');
+            });
+
+            await axios.post(`${apiUrl}/api/item/create`, formData, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'multipart/form-data',
+                },
+            });
+
+            Toast.show({
+                ...toastOptions,
+                type: 'success',
+                text1: '임시저장 완료'
+            });
+            navigation.goBack();
+        } catch(error) {
+            Toast.show({
+                ...toastOptions,
+                type: 'error',
+                text1: '임시저장 실패'
+            });
+        } finally {
+            setLoading(false);
+        }
+    }
+
 
     return (
-        <SafeTopWrapper style={styles.container}>
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.closeButton}>
-                    <Ionicons name="close" size={24} color="#000" />
-                </TouchableOpacity>
-                <AppText style={styles.headerTitle}>내 물건 경매</AppText>
-            </View>
-
-
-            <ScrollView style={styles.scrollArea} contentContainerStyle={styles.contentContainer}>
-                {/* 안내문구 추가 */}
-                <View style={styles.topNoticeBox}>
-                    <Ionicons name="information-circle-outline" size={18} color="#6495ED" style={{ marginRight: 6 }} />
-                    <Text style={styles.topNoticeText}>
-                        판매금지 물품, 광고, 반복된 게시글은 경고 없이 삭제될 수 있습니다.
-                    </Text>
+        <SafeTopWrapper style={{ flex: 1 }}>
+            <KeyboardAvoidingView 
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 120 : 0}
+                style={{ flex: 1 }}
+            >
+                <View style={styles.header}>
+                    <TouchableOpacity onPress={handleTemporarySave} style={styles.closeButton}>
+                        <Ionicons name="close" size={24} color="#000" />
+                    </TouchableOpacity>
+                    <AppText style={styles.headerTitle}>내 물건 경매</AppText>
                 </View>
-                {/* 사진 추가 */}
-                <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.imageContainer}
-                >
-                    {/* 사진 추가 버튼 */}
-                    {images.length < 10 && (
-                        <TouchableOpacity style={styles.addButton} onPress={pickImage}>
-                            {/* <AppText style={styles.addButtonText}>+</AppText> */}
-                            <Ionicons name="camera-outline" size={28} color="#6495ED" />
-                            <Text style={styles.imageCountText}>{images.length}/10</Text>
-                        </TouchableOpacity>
-                    )}
 
-                    {/* 이미지 리스트 */}
-                    {images.map((img, i) => (
-                        <View key={i} style={styles.imageWrapper}>
-                            <Image source={{ uri: img.uri }} style={styles.preview} />
-                            {/* 대표사진 라벨 */}
-                            {i === 0 && (
-                                <View style={styles.labelTag}>
-                                    <Text style={styles.labelText}>대표 사진</Text>
-                                </View>
-                            )}
-                            
-                            <TouchableOpacity
-                                style={styles.deleteButton}
-                                onPress={() => removeImage(i)}
-                            >
-                                <Text style={styles.deleteButtonText}>×</Text>
+
+                <ScrollView style={styles.scrollArea} contentContainerStyle={styles.contentContainer}>
+                    {/* 안내문구 추가 */}
+                    <View style={styles.topNoticeBox}>
+                        <Ionicons name="information-circle-outline" size={18} color="#6495ED" style={{ marginRight: 6 }} />
+                        <Text style={styles.topNoticeText}>
+                            판매금지 물품, 광고, 반복된 게시글은 경고 없이 삭제될 수 있습니다.
+                        </Text>
+                    </View>
+                    {/* 사진 추가 */}
+                    <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={styles.imageContainer}
+                    >
+                        {/* 사진 추가 버튼 */}
+                        {images.length < 10 && (
+                            <TouchableOpacity style={styles.addButton} onPress={pickImage}>
+                                {/* <AppText style={styles.addButtonText}>+</AppText> */}
+                                <Ionicons name="camera-outline" size={28} color="#6495ED" />
+                                <Text style={styles.imageCountText}>{images.length}/10</Text>
                             </TouchableOpacity>
+                        )}
+
+                        {/* 이미지 리스트 */}
+                        {images.map((img, i) => (
+                            <View key={i} style={styles.imageWrapper}>
+                                <Image source={{ uri: img.uri }} style={styles.preview} />
+                                {/* 대표사진 라벨 */}
+                                {i === 0 && (
+                                    <View style={styles.labelTag}>
+                                        <Text style={styles.labelText}>대표 사진</Text>
+                                    </View>
+                                )}
+                                
+                                <TouchableOpacity
+                                    style={styles.deleteButton}
+                                    onPress={() => removeImage(i)}
+                                >
+                                    <Text style={styles.deleteButtonText}>×</Text>
+                                </TouchableOpacity>
+                            </View>
+                        ))}
+                    </ScrollView>
+
+                    {/* 상품명 */}
+                    <View style={styles.inputRow}>
+                        <View style={styles.labelBox}>
+                            <Text style={styles.rowLabel}>상품명</Text>
                         </View>
-                    ))}
+                        <TextInput
+                            style={styles.rowInput}
+                            value={title}
+                            onChangeText={setTitle}
+                            placeholder="상품명을 입력해 주세요."
+                        />
+                    </View>
+
+                    {/* 카테고리 */}
+                    <View style={styles.inputRow}>
+                        <View style={styles.labelBox}>
+                            <Text style={styles.rowLabel}>카테고리</Text>
+                        </View>
+                        <TouchableOpacity style={{ flex: 1 }} onPress={goCategoryPicker}>
+                            <TextInput
+                                style={styles.rowInput}
+                                placeholder="카테고리를 선택해 주세요."
+                                value={selectedCategory || ''}
+                                editable={false}  // 직접 입력 못 하게 막음
+                                pointerEvents="none" // 안드로이드 터치 충돌 방지용
+                            />
+                        </TouchableOpacity>
+                    </View>
+
+                    {/* 시작가 */}
+                    <View style={styles.inputRow}>
+                        <View style={styles.labelBox}>
+                            <Text style={styles.rowLabel}>시작가</Text>
+                        </View>
+                        <TextInput
+                            style={styles.rowInput}
+                            value={startPrice.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                            onChangeText={(text) => setStartPrice(formatCurrencyInput(text))}
+                            keyboardType="number-pad"
+                            placeholder="시작가를 입력해주세요."
+                        />
+                    </View>
+
+                    {/* 경매옵션 */}
+                    <View style={styles.inputRow}>
+                        <View style={styles.labelBox}>
+                            <Text style={styles.rowLabel}>경매옵션</Text>
+                        </View>
+                        <TouchableOpacity style={{ flex: 1 }} onPress={goOptionPage}>
+                            <TextInput
+                                style={styles.rowInput}
+                                placeholder="경매 옵션을 선택해 주세요."
+                                editable={false}  // 직접 입력 못 하게 막음
+                                pointerEvents="none" // 안드로이드 터치 충돌 방지용
+                                value={getAuctionOptionText()}
+                            />
+                        </TouchableOpacity>
+                    </View>
+                    {/* 설명 영역 (라벨 없이 전체 박스처럼) */}
+                    <View style={styles.descriptionWrapper}>
+                        {(!description || description === '') && (
+                            <Text style={styles.placeholderText}>
+                                - 경매할 물건의 설명을 입력해 주세요.{"\n"}
+                                - 제품명, 물건의 상태, 사용 기간 등
+                            </Text>
+                        )}
+                        <TextInput
+                            style={styles.descriptionInput}
+                            value={description}
+                            onChangeText={setDescription}
+                            multiline
+                        />
+                    </View>
+
                 </ScrollView>
 
-                {/* 상품명 */}
-                <View style={styles.inputRow}>
-                    <View style={styles.labelBox}>
-                        <Text style={styles.rowLabel}>상품명</Text>
+                <View style={styles.footer}>
+                    <AddButton title="등록하기" onPress={itemUpload} style={styles.footerButton} />
+                </View>
+
+                {loading && (
+                    <View style={styles.spinnerWrapper}>
+                        <ActivityIndicator size="large" color="#6495ED" />
                     </View>
-                    <TextInput
-                        style={styles.rowInput}
-                        value={title}
-                        onChangeText={setTitle}
-                        placeholder="상품명을 입력해 주세요."
-                    />
-                </View>
-
-                {/* 카테고리 */}
-                <View style={styles.inputRow}>
-                    <View style={styles.labelBox}>
-                        <Text style={styles.rowLabel}>카테고리</Text>
-                    </View>
-                    <TouchableOpacity style={{ flex: 1 }} onPress={goCategoryPicker}>
-                        <TextInput
-                            style={styles.rowInput}
-                            placeholder="카테고리를 선택해 주세요."
-                            value={categoryName}
-                            editable={false}  // 직접 입력 못 하게 막음
-                            pointerEvents="none" // 안드로이드 터치 충돌 방지용
-                        />
-                    </TouchableOpacity>
-                </View>
-
-                {/* 시작가 */}
-                <View style={styles.inputRow}>
-                    <View style={styles.labelBox}>
-                        <Text style={styles.rowLabel}>시작가</Text>
-                    </View>
-                    <TextInput
-                        style={styles.rowInput}
-                        value={startPrice.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                        onChangeText={(text) => setStartPrice(formatCurrencyInput(text))}
-                        keyboardType="number-pad"
-                        placeholder="시작가를 입력해주세요."
-                    />
-                </View>
-
-                {/* 경매옵션 */}
-                <View style={styles.inputRow}>
-                    <View style={styles.labelBox}>
-                        <Text style={styles.rowLabel}>경매옵션</Text>
-                    </View>
-                    <TouchableOpacity style={{ flex: 1 }}>
-                        <TextInput
-                            style={styles.rowInput}
-                            placeholder="경매 옵션을 선택해 주세요."
-                            editable={false}  // 직접 입력 못 하게 막음
-                            pointerEvents="none" // 안드로이드 터치 충돌 방지용
-                        />
-                    </TouchableOpacity>
-                </View>
-
-                {/* 입찰단위 */}
-                {/* <View style={styles.inputRow}>
-                    <Text style={styles.rowLabel}>입찰단위</Text>
-                    <TextInput
-                        style={styles.rowInput}
-                        value={bidIncrement.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                        onChangeText={(text) => setBidIncrement(formatCurrencyInput(text))}
-                        keyboardType="number-pad"
-                        placeholder="₩"
-                    />
-                </View> */}
-
-                {/* 즉시구매가 */}
-                {/* <View style={styles.inputRow}>
-                    <Text style={styles.rowLabel}>즉시구매가</Text>
-                    <TextInput
-                        style={styles.rowInput}
-                        value={buyNowPrice.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                        onChangeText={(text) => setBuyNowPrice(formatCurrencyInput(text))}
-                        keyboardType="number-pad"
-                        placeholder="₩"
-                    />
-                </View> */}
-
-                {/* 설명 영역 (라벨 없이 전체 박스처럼) */}
-                <View style={styles.descriptionWrapper}>
-                    {description === '' && (
-                        <Text style={styles.placeholderText}>
-                            - 경매할 물건의 설명을 입력해 주세요.{"\n"}
-                            - 제품명, 물건의 상태, 사용 기간 등
-                        </Text>
-                    )}
-                    <TextInput
-                        style={styles.descriptionInput}
-                        value={description}
-                        onChangeText={setDescription}
-                        multiline
-                    />
-                </View>
-
-                {/* 경매 시작 시간 */}
-                {/* <AppText style={styles.label}>경매 시작 시간</AppText>
-                <View style={styles.optionRow}>
-                    {START_OPTIONS.map(opt => (
-                        <TouchableOpacity
-                            key={opt}
-                            onPress={() => onPressStartOption(opt)}
-                            style={[styles.optionBtn, startOption === opt && styles.optionBtnActive]}
-                        >
-                        <Text style={ startOption === opt ? styles.optionTextActive : styles.optionText }>
-                            {opt}
-                        </Text>
-                        </TouchableOpacity>
-                    ))}
-                </View> */}
-                
-                {/* 선택한 경매 시간 보여주기 */}
-                {/* {startDateString !== "" && (
-                    <AppText>
-                        선택한 시작 시간 : {startDateString}
-                    </AppText>
-                )} */}
-
-                {/* 경매 마감 시간 */}
-                {/* <AppText style={styles.label}>경매 마감 시간</AppText>
-                    <View style={styles.optionRow}>
-                    {END_OPTIONS.map(opt => (
-                        <TouchableOpacity
-                        key={opt}
-                        onPress={() => onPressEndOption(opt)}
-                        style={[styles.optionBtn, endOption === opt && styles.optionBtnActive]}
-                        >
-                        <Text style={ endOption === opt ? styles.optionTextActive : styles.optionText }>
-                            {opt}
-                        </Text>
-                        </TouchableOpacity>
-                    ))}
-                </View> */}
-
-                {/* 선택한 경매 시간 보여주기 */}
-                {/* {endDateString !== "" && (
-                    <AppText>
-                        선택한 마감 시간 : {endDateString}
-                    </AppText>
-                )} */}
-
-                {/* <DateTimeModal
-                    title={pickerType}
-                    visible={showStartPicker || showEndPicker}
-                    initialDate={startDate}
-                    onCancel={() => {
-                        if(showStartPicker) {
-                            setStartOption('등록즉시');
-                            setShowStartPicker(false);
-                        }else if(showEndPicker) {
-                            setStartOption('수동마감');
-                            setShowEndPicker(false);
-                        }
-                    }}
-                    onConfirm={date => {
-                        if(showStartPicker) {
-                            const now = new Date();
-                            const valid = date < now ? now : date;
-                            setStartDate(valid);
-                            setShowStartPicker(false);
-                            var showStartDate = formatDate(valid);   // 보여줄 날짜
-                            setStartDateString(showStartDate);
-                            
-                        }else if(showEndPicker) {
-                            // 마감시간은 시작시간보다 크고 최소 한시간 뒤로 가야됨
-                            // 마감시간은 최소 한시간 뒤로 설정
-                            const minEnd = new Date(startDate.getTime() + 60 * 60 * 1000);
-                            if (date < minEnd) {
-                                Alert.alert('경고', '마감시간은 시작시간보다 최소 1시간 이후여야 합니다.', [
-                                    { text: '확인', onPress: () => {} },
-                                ]);
-                                date = minEnd;
-                            }
-                            setEndDate(date);
-                            setShowEndPicker(false);
-                            var showEndDate = formatDate(date);
-                            setEndDateString(showEndDate);
-                        }
-                    }}
-                /> */}
-
-                {/* 제목 등 나머지 폼 */}
-                {/* <AppText style={styles.label}>입찰 단위 (₩)</AppText>
-                <TextInput
-                    style={styles.input}
-                    placeholder="예: 1,000"
-                    value={bidIncrement.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                    onChangeText={(text) => {
-                        const formattedBidPrice = formatCurrencyInput(text);
-                        setBidIncrement(formattedBidPrice);
-                    }}
-                    keyboardType="number-pad" />
-                <AppText style={styles.label}>즉시 구매가 (₩)</AppText>
-                <TextInput
-                    style={styles.input}
-                    placeholder="예: 50,000"
-                    value={buyNowPrice.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                    onChangeText={(text) => {
-                        const formattedBuyNowPrice = formatCurrencyInput(text);
-                        setBuyNowPrice(formattedBuyNowPrice)
-                    }}
-                    keyboardType="number-pad"
-                /> */}
-            </ScrollView>
-
-            <View style={styles.footer}>
-                <AddButton title="등록하기" onPress={itemUpload} style={styles.footerButton} />
-            </View>
-
-            {loading && (
-                <View style={styles.spinnerWrapper}>
-                    <ActivityIndicator size="large" color="#6495ED" />
-                </View>
-            )}
+                )}
+            </KeyboardAvoidingView>
         </SafeTopWrapper>
     );
 }
@@ -828,18 +741,10 @@ const styles = StyleSheet.create({
     
     // 등록하기 버튼
     footer: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        height: FOOTER_HEIGHT + HOME_INDICATOR_HEIGHT + 24,
-        backgroundColor: '#fff',
+        padding: 16,
         borderTopWidth: 1,
         borderTopColor: '#ccc',
-        justifyContent: 'center',
-        paddingHorizontal: 16,
-        zIndex: 10,
-        elevation: 10,
+        backgroundColor: '#fff',
     },
     footerButton: {
         width: '100%',
