@@ -12,6 +12,17 @@ export const ItemUploadProvider = ({ children }) => {
     const [images, setImages] = useState([]);
     const [auctionOption, setAuctionOption] = useState(null);
 
+    const resetForm = () => {
+        setTitle('');
+        setDescription('');
+        setStartPrice('');
+        setImages([]);
+        setMainCategoryId(null);
+        setSubCategoryId(null);
+        setSelectedCategory('');
+        setAuctionOption(null);
+    }
+
     return (
         <ItemUploadContext.Provider
             value={{
@@ -23,9 +34,10 @@ export const ItemUploadProvider = ({ children }) => {
                 selectedCategory, setSelectedCategory,
                 images, setImages,
                 auctionOption, setAuctionOption,
+                resetForm
             }}
         >
-            {children}
+            {children ?? null}
         </ItemUploadContext.Provider>
     );
 };

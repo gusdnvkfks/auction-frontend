@@ -5,6 +5,7 @@ import { Text, StyleSheet, View, Alert, FlatList, TouchableOpacity, ActivityIndi
 import AuctionItem from '../../components/AuctionItem';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import FIcon from 'react-native-vector-icons/Feather';
+import MIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 import FloatingButton from '../../components/FloatingButton';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -21,8 +22,6 @@ const HomePage = () => {
     const { token } = useContext(AuthContext);
 
     const [searchKeyword, setSearchKeyword] = useState(route.params?.searchKeyword || '');
-    const [categories, setCategories] = useState([]);   // 카테고리 목록록
-    const [selectedCategory, setSelectedCategory] = useState(0); // 카테고리 선택 상태
 
     const [items, setItems] = useState([]);
     const [page, setPage] = useState(1);
@@ -30,54 +29,10 @@ const HomePage = () => {
     const [hasMore, setHasMore] = useState(true);
     const [cursor, setCursor] = useState(null);
 
-    const categoryData = useMemo(() => [
-        { id: 0, name: '전체' },
-        ...categories,
-        { id: -1, name: '더보기' }
-    ], [categories]);
-
-    // 카테고리 호출
-    useEffect(() => {
-        getCategoryList();
-    }, []);
-
-    const getCategoryList = async () => {
-        try {
-            const res = await axios.get(`${apiUrl}/api/category`, {
-                params: {
-                    mode: "main"
-                },
-                headers: {
-                    Authorization: `Bearer ${token}`
-                }
-            });
-            if(res.data.result === "success") {
-                setCategories(res.data.categories);
-            }
-        } catch (error) {
-            console.log(error);
-        }
-    }
-    
-    // useEffect(() => {
-    //     getItemList();
-    // }, [page, selectedCategory]);
-
-    // useFocusEffect(
-    //     useCallback(() => {
-    //         setItems([]);
-    //         setPage(1);
-    //         setCursor(null);
-    //         setHasMore(true);
-    //         getItemList();
-    //         setLoading(false);  // 혹시 남아있을 loading 상태 초기화
-    //     }, [searchKeyword, selectedCategory])
-    // );
-
     useFocusEffect(
         useCallback(() => {
             reset();
-        }, [searchKeyword, selectedCategory])
+        }, [searchKeyword])
     );
 
     const reset = () => {
@@ -99,7 +54,7 @@ const HomePage = () => {
 
     useEffect(() => {
         getItemList();
-    }, [page, selectedCategory]);
+    }, [page]);
 
     const getItemList = async () => {
         // 더 불러올게 있는 지 확인
@@ -116,7 +71,6 @@ const HomePage = () => {
                     page,
                     searchKeyword,
                     ...(cursor ? { cursor } : {}),
-                    ...(selectedCategory !== 0 ? { categoryId: selectedCategory } : {}),
                 },
                 headers: {
                     Authorization: `Bearer ${token}`,
@@ -188,69 +142,24 @@ const HomePage = () => {
         setSearchKeyword(''); // ✅ 이 한 줄이 핵심
     };
 
-    const renderCategoryItem = ({ item }) => {
-        const selectedCategoryHandle = () => {
-            if (item.id === -1) {
-                // -1이면 카테고리 목록 페이지로 이동
-                navigation.navigate("CategoryPage");
-            } else {
-                setSelectedCategory(item.id);
-            }
-        }
-        return (
-            <TouchableOpacity
-                style={[
-                    styles.categoryButton,
-                    selectedCategory === item.id && styles.selectedCategoryButton
-                ]}
-                onPress={selectedCategoryHandle}
-            >
-                <Text style={[
-                    styles.categoryText,
-                    selectedCategory === item.id && styles.selectedCategoryText
-                ]}>
-                    {item.name}
-                </Text>
-            </TouchableOpacity>
-        )
-    };
-
     return (
         <View style={{ flex: 1 }}>
-            <View style={[
-                styles.searchContainer,
-                searchKeyword !== ''
-                    ? {marginRight: 20}
-                    : {}
-            ]}>
-                <TouchableOpacity
-                    onPress={() => navigation.getParent()?.navigate('Search')}
-                    activeOpacity={0.9}
-                    style={styles.searchTouchable}
-                >
-                    <Icon name="search" size={18} color="#888" style={styles.searchIcon} />
-                    <Text style={styles.fakeInput}>
-                        {searchKeyword !== '' ? searchKeyword : '검색어를 입력하세요'}
-                    </Text>
-                </TouchableOpacity>
-                {searchKeyword !== '' && (
-                    <TouchableOpacity 
-                        onPress={handleClear}
-                        style={styles.clearBtn}>
-                        <FIcon name="x" size={20} color="#888" />
+            {/* 헤더영역 */}
+            <View style={styles.headerContainer}>
+                <View style={{ flex: 1 }} />
+                <View style={styles.iconContainer}>
+                    <TouchableOpacity onPress={() => navigation.navigate('Search')}>
+                        <MIcon name="magnify" size={26} color="#000" style={styles.icon} />
                     </TouchableOpacity>
-                )}
+                    <TouchableOpacity onPress={() => navigation.navigate('Notifications')}>
+                        <MIcon name="bell-outline" size={26} color="#000" style={styles.icon} />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => navigation.toggleDrawer()}>
+                        <MIcon name="menu" size={26} color="#000" style={styles.icon} />
+                    </TouchableOpacity>
+                </View>
             </View>
-            {/* 카테고리 영역 */}
-            <View style={styles.categoryWrapper}>
-                <FlatList
-                    data={categoryData}
-                    renderItem={renderCategoryItem}
-                    keyExtractor={item => item.id.toString()}
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                />
-            </View>
+
             {/* 경매 물품 영역 */}
             <FlatList 
                 contentContainerStyle={
@@ -290,9 +199,58 @@ const HomePage = () => {
 const HEADER_HEIGHT = 48;  // 원하는 고정 높이
 
 const styles = StyleSheet.create({
+    headerContainer: {
+        height: 48,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 16,
+        backgroundColor: '#fff',
+        borderBottomWidth: 1,
+        borderColor: '#ddd',
+    },
+    iconContainer: {
+        flexDirection: 'row',
+    },
+    icon: {
+        marginLeft: 16,
+    },
     scrollContent: {
         padding: 12,
-        paddingTop: HEADER_HEIGHT,
+    },
+    noItemContent: {
+        paddingTop: 0,
+    },
+    emptyContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingTop: 200,
+    },
+    logo: {
+        width: 140,
+        height: 140,
+        marginBottom: 16,
+        opacity: 0.7,
+    },
+    emptyText: {
+        color: '#888',
+        fontSize: 18,
+    },
+    spinnerWrapper: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(255,255,255,0.5)',
+        zIndex: 999,
+    },
+
+    scrollContent: {
+        padding: 12,
     },
     noItemContent: {
         paddingTop: 0,  // 원하는 위치로 조정

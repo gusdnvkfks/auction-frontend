@@ -48,7 +48,8 @@ const ItemUploadPage = ({ navigation }) => {
         mainCategoryId, setMainCategoryId,
         subCategoryId, setSubCategoryId,
         selectedCategory, setSelectedCategory,
-        auctionOption, setAuctionOption
+        auctionOption, setAuctionOption,
+        resetForm
     } = useContext(ItemUploadContext);
 
     const [loading, setLoading] = useState(false);
@@ -251,6 +252,7 @@ const ItemUploadPage = ({ navigation }) => {
                     type: 'success',
                     text1: '경매물품 등록이 완료되었습니다.',
                 });
+                resetForm();
                 navigation.replace("Main");
             }else {
                 Toast.show({
@@ -354,6 +356,7 @@ const ItemUploadPage = ({ navigation }) => {
                 type: 'success',
                 text1: '임시저장 완료'
             });
+            resetForm();
             navigation.goBack();
         } catch(error) {
             Toast.show({
@@ -365,7 +368,6 @@ const ItemUploadPage = ({ navigation }) => {
             setLoading(false);
         }
     }
-
 
     return (
         <SafeTopWrapper style={{ flex: 1 }}>
