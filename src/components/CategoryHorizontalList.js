@@ -10,11 +10,17 @@ const CategoryHorizontalList = ({ categories }) => {
     const navigation = useNavigation();
     
     // 해당 카테고리 아이템 목록으로 가기
-    const selectCategory = async (categoryId) => {
+    const selectCategory = async (categoryId, categoryName) => {
         if(categoryId === 0) {
             navigation.navigate("CategoryAll");
+        }else {
+            navigation.navigate('CategoryItem', {
+                mainCategoryId: categoryId,
+                mainCategoryName: categoryName
+            });
         }
     }
+
     return (
         <View style={styles.categorySection}>
             <ScrollView
@@ -26,7 +32,7 @@ const CategoryHorizontalList = ({ categories }) => {
                     <Text style={styles.moreText}>전체</Text>
                 </TouchableOpacity>
                 {categories.map((cate, index) => (
-                    <TouchableOpacity key={index} style={styles.categoryItem} onPress={() => selectCategory(cate.id)}>
+                    <TouchableOpacity key={index} style={styles.categoryItem} onPress={() => selectCategory(cate.id, cate.name)}>
                         <Text style={styles.categoryText}>{cate.name}</Text>
                     </TouchableOpacity>
                 ))}
