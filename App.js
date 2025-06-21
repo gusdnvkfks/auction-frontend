@@ -4,7 +4,6 @@ import { store } from './src/app/store';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
-import HeaderLayout from './src/components/HeaderLayout';
 import { AuthProvider } from './src/contexts/AuthContext';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import Toast, { BaseToast } from 'react-native-toast-message';
@@ -32,6 +31,8 @@ import MainTabNavigator from './src/navigators/MainTabNavigator';
 import CategoryAllPage from './src/pages/main/CategoryAllPage';
 import CategoryItemPage from './src/pages/main/CategoryItemPage';
 import InterceptorInitializer from './src/hooks/InterceptorInitializer';
+import EditProfilePage from './src/pages/mypage/EditProfilePage';
+import SettingPage from './src/pages/mypage/SettingPage';
 
 // 토스트 설정
 const toastConfig = {
@@ -68,9 +69,9 @@ export default function App() {
                             <ItemUploadProvider>
                                 <Stack.Navigator
                                     initialRouteName="Splash"
-                                    screenOptions={({ navigation }) => ({
-                                        header: () => <HeaderLayout navigation={navigation} />,
-                                    })}
+                                    screenOptions={{
+                                        headerShown: false   // header: () => <HeaderLayout /> 제거
+                                    }}
                                 >
                                     <Stack.Screen name="Splash" component={SplashPage} options={{ headerShown: false }} initialParams={{ nextPage: "Landing", text: "" }}/>
                                     <Stack.Screen name="Landing" component={LandingPage} options={{ headerShown: false }} />
@@ -92,6 +93,8 @@ export default function App() {
                                     <Stack.Screen name="CategoryPicker" component={CategoryPickerPage} options={{ headerShown: false }} />
                                     <Stack.Screen name="CategoryAll" component={CategoryAllPage} options={{ headerShown: false }} />
                                     <Stack.Screen name="CategoryItem" component={CategoryItemPage} options={{ headerShown: false }} />
+                                    <Stack.Screen name="EditProfile" component={EditProfilePage} options={{ headerShown: false }} />
+                                    <Stack.Screen name="Setting" component={SettingPage} options={{ headerShown: false }} />
                                 </Stack.Navigator>
                             </ItemUploadProvider>
                         </NavigationContainer>

@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   version="1.1"
+   id="svg1"
+   width="5333.3335"
+   height="5333.3335"
+   viewBox="0 0 5333.3335 5333.3335"
+   sodipodi:docname="vector_52085.eps"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs1" />
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1">
+    <inkscape:page
+       x="0"
+       y="0"
+       inkscape:label="1"
+       id="page1"
+       width="5333.3335"
+       height="5333.3335"
+       margin="0"
+       bleed="0" />
+  </sodipodi:namedview>
+  <g
+     id="g1"
+     inkscape:groupmode="layer"
+     inkscape:label="1">
+    <g
+       id="group-R5">
+      <path
+         id="path2"
+         d="m 32790,20000 c 0,-3746.8 -1611.1,-7117.3 -4178.3,-9456.5 C 26339,8472.7 23317,7210 20000,7210 16683,7210 13661,8472.7 11388.3,10543.5 8821.07,12882.7 7210,16253.2 7210,20000 c 0,7063.7 5726.3,12790 12790,12790 7063.7,0 12790,-5726.3 12790,-12790"
+         style="fill:#afb1b0;fill-opacity:1;fill-rule:nonzero;stroke:none"
+         transform="matrix(0.13333333,0,0,-0.13333333,0,5333.3333)" />
+      <path
+         id="path3"
+         d="M 28611.7,10543.5 C 26339,8472.7 23317,7210 20000,7210 c -3317,0 -6339,1262.7 -8611.7,3333.5 1259.9,2651 3301.5,4602.7 5749.7,5463 13.2,-7.3 26.4,-14.7 39.7,-21.8 165.5,-91.9 335,-175.9 507.7,-250.9 359.2,-156.3 735.3,-276.3 1117.6,-356.6 391.6,-82.4 794.4,-124.2 1197,-124.2 402.6,0 805.4,41.8 1197,124.2 382.3,80.3 758.4,200.3 1117.7,356.6 172.6,75 342,159 507.5,250.9 13.4,7.1 26.6,14.5 39.8,21.8 2448.2,-860.3 4489.8,-2812 5749.7,-5463"
+         style="fill:#f1f1ef;fill-opacity:1;fill-rule:nonzero;stroke:none"
+         transform="matrix(0.13333333,0,0,-0.13333333,0,5333.3333)" />
+      <path
+         id="path4"
+         d="m 24747.3,21204.1 c 0,2621.9 -2125.4,4747.3 -4747.3,4747.3 -2621.9,0 -4747.3,-2125.4 -4747.3,-4747.3 0,-2621.8 2125.4,-4747.3 4747.3,-4747.3 2621.9,0 4747.3,2125.5 4747.3,4747.3"
+         style="fill:#f1f1ef;fill-opacity:1;fill-rule:nonzero;stroke:none"
+         transform="matrix(0.13333333,0,0,-0.13333333,0,5333.3333)" />
+    </g>
+  </g>
+</svg>
