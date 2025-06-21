@@ -31,6 +31,7 @@ import CompleteSalePage from './src/pages/mypage/CompleteSalePage';
 import MainTabNavigator from './src/navigators/MainTabNavigator';
 import CategoryAllPage from './src/pages/main/CategoryAllPage';
 import CategoryItemPage from './src/pages/main/CategoryItemPage';
+import InterceptorInitializer from './src/hooks/InterceptorInitializer';
 
 // 토스트 설정
 const toastConfig = {
@@ -59,6 +60,7 @@ const Stack = createStackNavigator();
 export default function App() {
     return (
         <AuthProvider>
+            <InterceptorInitializer />
             <SafeAreaProvider>
                 <GestureHandlerRootView style={{ flex: 1 }}>
                     <Provider store={store}>

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useContext } from 'react';
 import {
     View,
     Text,
@@ -15,6 +15,7 @@ import axios from 'axios';
 import Config from 'react-native-config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import AppText from '../../components/AppText';
+import { AuthContext } from '../../contexts/AuthContext';
 
 const LoginPage = ({ navigation }) => {
     // API URL
@@ -32,6 +33,8 @@ const LoginPage = ({ navigation }) => {
     const [activeInput, setActiveInput] = useState(null);
     // 인증번호 입력 시 3분 제한 시간 두기
     const [timer, setTimer] = useState(180); // 180초 = 3분
+
+    const { setToken } = useContext(AuthContext); // 👈 이 줄 추가
 
     // 인증번호 입력할 때 isPhoneComplete가 true이면 1초씩 빠지기
     useEffect(() => {
@@ -188,6 +191,8 @@ const LoginPage = ({ navigation }) => {
             // accessToken과 refreshToken asyncStorage에 보관해주기
             await AsyncStorage.setItem('accessToken', res.data.accessToken);
             await AsyncStorage.setItem('refreshToken', res.data.refreshToken);
+
+            setToken(accessToken);
     
             // Alert.alert("로그인이 완료되었습니다.");
             // TODO : 로그인 이후 처리 하기

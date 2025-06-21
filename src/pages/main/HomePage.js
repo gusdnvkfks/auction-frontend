@@ -65,7 +65,6 @@ const HomePage = () => {
         // 로딩 true로 세팅하기기
         setLoading(true);
         try {
-            
             const res = await axios.get(`${apiUrl}/api/item`, {
                 params: { 
                     page,
@@ -126,7 +125,6 @@ const HomePage = () => {
     }
 
     const goItemUpload = () => {
-        const token = AsyncStorage.getItem("accessToken");
         if(token) {
             navigation.navigate('ItemUpload')
         }else {
