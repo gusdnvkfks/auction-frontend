@@ -29,7 +29,7 @@ const EditProfilePage = ( {navigation }) => {
 
     const toastOptions = {
         position: 'bottom',
-        bottomOffset: 100,
+        bottomOffset: 50,
         visibilityTime: 2000,
     };
 
@@ -397,6 +397,17 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         padding: 12,
         fontSize: 13,
+    },
+    spinnerWrapper: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(255,255,255,0.5)',
+        zIndex: 999,
     },
 });
 

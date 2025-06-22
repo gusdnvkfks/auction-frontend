@@ -33,16 +33,17 @@ import CategoryItemPage from './src/pages/main/CategoryItemPage';
 import InterceptorInitializer from './src/hooks/InterceptorInitializer';
 import EditProfilePage from './src/pages/mypage/EditProfilePage';
 import SettingPage from './src/pages/mypage/SettingPage';
+import BlockedUsersPage from './src/pages/mypage/BlockedUserPage';
 
 // 토스트 설정
 const toastConfig = {
     success: (props) => (
         <BaseToast
             {...props}
-            style={{ backgroundColor: '#d3d3d3', borderLeftWidth: 4, borderRadius: 8 }}
+            style={{ backgroundColor: '#BFD4FA', borderLeftWidth: 4, borderRadius: 8 }}
             contentContainerStyle={{ paddingHorizontal: 14 }}
             text1Style={{ fontSize: 13, fontWeight: '500', color: '#202124' }}
-            text2Style={{ fontSize: 11, color: '#5f6368' }}
+            text2Style={{ fontSize: 13, color: '#5f6368' }}
         />
     ),
     error: (props) => (
@@ -51,7 +52,7 @@ const toastConfig = {
             style={{ backgroundColor: '#d3d3d3', borderLeftWidth: 4, borderRadius: 8 }}
             contentContainerStyle={{ paddingHorizontal: 14 }}
             text1Style={{ fontSize: 13, fontWeight: '500', color: '#202124' }}
-            text2Style={{ fontSize: 11, color: '#5f6368' }}
+            text2Style={{ fontSize: 13, color: '#5f6368' }}
         />
     ),
 };
@@ -95,6 +96,7 @@ export default function App() {
                                     <Stack.Screen name="CategoryItem" component={CategoryItemPage} options={{ headerShown: false }} />
                                     <Stack.Screen name="EditProfile" component={EditProfilePage} options={{ headerShown: false }} />
                                     <Stack.Screen name="Setting" component={SettingPage} options={{ headerShown: false }} />
+                                    <Stack.Screen name="BlockedUsers" component={BlockedUsersPage} options={{ headerShown: false }} />
                                 </Stack.Navigator>
                             </ItemUploadProvider>
                         </NavigationContainer>

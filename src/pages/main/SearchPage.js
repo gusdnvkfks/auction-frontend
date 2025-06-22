@@ -27,7 +27,6 @@ const SearchPage = () => {
     const navigation = useNavigation();
 
     useEffect(() => {
-        console.log("현재 토큰:", token);
         loadRecentSearches();
         loadCategoryList();
     }, []);
@@ -54,7 +53,6 @@ const SearchPage = () => {
     const loadCategoryList = async () => {
         try {
             axios.interceptors.request.use(config => {
-                console.log("요청 토큰:", config.headers.Authorization);
                 return config;
             });
             const res = await axios.get(`${apiUrl}/api/category/first/7`, {

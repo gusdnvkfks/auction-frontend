@@ -14,8 +14,6 @@ import UserNoImgIcon from '../../assets/images/user/noImgUser.svg';
 import SettingIcon from '../../assets/images/common/setting.svg';
 
 const MyPage = () => {
-    console.log('SettingIcon:', SettingIcon);
-
     const apiUrl = Config.API_URL;
     const navigation = useNavigation();
     const { token } = useContext(AuthContext);
@@ -94,7 +92,7 @@ const MyPage = () => {
                     </View>
                     
                     {/* 오른쪽 상단: 설정 아이콘 */}
-                    <TouchableOpacity onPress={() => navigation.navigate('Setting')} style={styles.settingIconWrapper}>
+                    <TouchableOpacity onPress={() => navigation.navigate('Setting', { phone: myInfo.phone })} style={styles.settingIconWrapper}>
                         <SettingIcon width={20} height={20}/>
                     </TouchableOpacity>
                 </View>
