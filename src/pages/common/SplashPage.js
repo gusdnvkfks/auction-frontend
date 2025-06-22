@@ -81,7 +81,7 @@ const SplashPage = ({ navigation, route }) => {
     const tryRefreshToken = async (refreshToken) => {
         // console.log(refreshToken);
         try {
-            const res = await axios.post(`${apiUrl}/api/refresh-token`, {
+            const res = await axios.post(`${apiUrl}/api/refresh-token`, {}, {
                 headers: { Authorization: `Bearer ${refreshToken}` }
             });
 
@@ -101,7 +101,7 @@ const SplashPage = ({ navigation, route }) => {
     const validateAccessToken = async (accessToken) => {
         // 토큰이 있으면 유효성 검사 먼저 실행
         try {
-            const res = await axios.get(`${apiUrl}/api/validateToken`, {
+            const res = await axios.get(`${apiUrl}/api/validateToken`, {}, {
                 headers: { Authorization: `Bearer ${accessToken}` }
             });
             return true;

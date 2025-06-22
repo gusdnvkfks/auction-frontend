@@ -153,7 +153,8 @@ const LoginPage = ({ navigation }) => {
             const res = await axios.post(`${apiUrl}/api/phone-certify/verify`, 
                 {
                     "phone": phoneNumber,
-                    "code": certifyNumber
+                    "code": certifyNumber,
+                    "type": "login",
                 },
                 {
                     headers: {
@@ -161,7 +162,7 @@ const LoginPage = ({ navigation }) => {
                     }
                 }
             );
-            
+
             if(res.data.result === "success") {
     
                 // 로그인 api 호출해주기.
@@ -192,12 +193,17 @@ const LoginPage = ({ navigation }) => {
             await AsyncStorage.setItem('accessToken', res.data.accessToken);
             await AsyncStorage.setItem('refreshToken', res.data.refreshToken);
 
-            setToken(accessToken);
+            setToken(res.data.accessToken);
     
             // Alert.alert("로그인이 완료되었습니다.");
             // TODO : 로그인 이후 처리 하기
-            navigation.navigate("Main");
+            
+            navigation.reset({
+                index: 0,
+                routes: [{ name: 'Main' }],
+            });
         } catch (error) {
+            console.log("login error : ", error);
             Alert.alert('잠시 후 다시 시도해주세요.');
         }
         

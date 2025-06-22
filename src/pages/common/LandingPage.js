@@ -34,7 +34,7 @@ const LandingPage = ({ navigation }) => {
         <TouchableOpacity
           style={styles.startButton}
           activeOpacity={0.8}
-          onPress={() => navigation.replace('Location')}
+          onPress={() => navigation.navigate('Location')}
           
         >
           <AppText style={styles.startButtonText}>시작하기</AppText>

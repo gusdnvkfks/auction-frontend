@@ -1,7 +1,7 @@
 // src/pages/mypage/SettingPage.js
 
 import React, { useState, useContext } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, ActivityIndicator, Modal } from 'react-native';
 import AngleHeader from '../../components/AngleHeader';
 import SafeTopWrapper from '../../components/SafeTopWrapper';
 import axios from 'axios';
@@ -12,10 +12,11 @@ import Toast from 'react-native-toast-message';
 // 아이콘
 import LeftAngle from '../../assets/images/common/left-angle.svg';
 import RightAngle from '../../assets/images/common/right-angle.svg';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const SettingPage = ({ navigation, route }) => {
     const apiUrl = Config.API_URL;
-    const { token } = useContext(AuthContext);
+    const { token, setToken, setUser } = useContext(AuthContext);
     const toastOptions = {
         position: 'bottom',
         bottomOffset: 50,
@@ -24,6 +25,7 @@ const SettingPage = ({ navigation, route }) => {
 
     const { phone } = route.params;
 
+    const [modalVisible, setModalVisible] = useState(false);
     const [loading, setLoading] = useState(false);
 
     // 앱 푸시 업데이트
@@ -79,8 +81,86 @@ const SettingPage = ({ navigation, route }) => {
 
     // 로그아웃
     const logout = async () => {
-        console.log('로그아웃');
+        setLoading(true);
+        try {
+            const res = await axios.post(`${apiUrl}/api/logout`, 
+                {
+                    
+                }, 
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    },
+                    withCredentials: true,
+                }
+            );
+            console.log(res);
+            if(res.data.result === "success") {
+                Toast.show({
+                    ...toastOptions,
+                    type: 'error',
+                    text1: "로그아웃 되었습니다.",
+                });
+                setToken(null);
+                setUser(null);
+                await AsyncStorage.removeItem("accessToken");
+                await AsyncStorage.removeItem("refreshToken");
+                navigation.reset({
+                    index: 0,
+                    routes: [{ name: 'Splash' }],
+                });
+            }
+        } catch (error) {
+            console.log(error);
+        } finally {
+            setLoading(false);
+        }
     }
+
+    // 회원 탈퇴 확인모달
+    const userWithrawal = () => {
+        setModalVisible(true);
+    }
+
+    const confirmWithdraw = async () => {
+        try {
+            setLoading(true);
+            const res = await axios.post(`${apiUrl}/api/withdraw`, {}, {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                },
+                withCredentials: true,
+            });
+
+            console.log(res);
+
+            if (res.data.result === 'success') {
+                Toast.show({
+                    ...toastOptions,
+                    type: 'success',
+                    text1: '회원탈퇴가 완료되었습니다.',
+                });
+                setToken(null);
+                setUser(null);
+                await AsyncStorage.removeItem("accessToken");
+                await AsyncStorage.removeItem("refreshToken");
+                navigation.reset({
+                    index: 0,
+                    routes: [{ name: 'Splash' }],
+                });
+            }
+        } catch (error) {
+            console.log(error);
+            Toast.show({
+                ...toastOptions,
+                type: 'error',
+                text1: '회원탈퇴 실패',
+            });
+        } finally {
+            setLoading(false);
+            setModalVisible(false);
+        }
+    };
     
     return (
         <SafeTopWrapper>
@@ -116,7 +196,7 @@ const SettingPage = ({ navigation, route }) => {
                     <Section title="기타">
                         <Item label="공지사항" />
                         <Item label="로그아웃" onPress={logout}/>
-                        <Item label="회원탈퇴" />
+                        <Item label="회원탈퇴" onPress={userWithrawal}/>
                         {/* <Item label="국가 변경" /> */}
                     </Section>
                 </View>
@@ -126,6 +206,34 @@ const SettingPage = ({ navigation, route }) => {
                     <ActivityIndicator size="large" color="#6495ED" />
                 </View>
             )}
+            <Modal
+                visible={modalVisible}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setModalVisible(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalBox}>
+                        <Text style={styles.modalTitle}>가치매김을 떠나시겠습니까?</Text>
+                        <Text style={styles.modalContent}>탈퇴 시 <Text style={{ color: '#FF6B6B', fontWeight: 'bold' }}>7일 </Text>이내에는 재가입이 <Text style={{ color: '#FF6B6B', fontWeight: 'bold' }}>불가능</Text>합니다.</Text>
+
+                        <View style={styles.modalButtons}>
+                            <TouchableOpacity
+                                style={[styles.modalButton, { backgroundColor: '#6494ED' }]}
+                                onPress={() => setModalVisible(false)}
+                            >
+                                <Text style={{ color: '#fff' }}>취소</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[styles.modalButton, { backgroundColor: '#eee' }]}
+                                onPress={confirmWithdraw}
+                            >
+                                <Text style={{ color: '#333' }}>탈퇴하기</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
         </SafeTopWrapper>
     );
 };
@@ -207,6 +315,42 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         backgroundColor: 'rgba(255,255,255,0.5)',
         zIndex: 999,
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.4)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    modalBox: {
+        width: '80%',
+        backgroundColor: '#fff',
+        padding: 24,
+        borderRadius: 12,
+        alignItems: 'center',
+    },
+    modalTitle: {
+        fontSize: 14,
+        fontWeight: 'bold',
+        marginBottom: 10,
+    },
+    modalContent: {
+        fontSize: 12,
+        color: '#666',
+        marginBottom: 20,
+        textAlign: 'center',
+    },
+    modalButtons: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        width: '100%',
+    },
+    modalButton: {
+        flex: 1,
+        paddingVertical: 10,
+        borderRadius: 6,
+        marginHorizontal: 5,
+        alignItems: 'center',
     },
 });
 
