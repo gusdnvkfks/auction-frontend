@@ -6,6 +6,8 @@ buildscript {
         targetSdkVersion = 35
         ndkVersion = "27.1.12297006"
         kotlinVersion = "2.0.21"
+        googlePlayServicesVersion = "20.0.0"
+
     }
     repositories {
         google()
@@ -19,3 +21,12 @@ buildscript {
 }
 
 apply plugin: "com.facebook.react.rootproject"
+
+allprojects {
+    configurations.all {
+        resolutionStrategy {
+            // play-services-location 을 20.0.0 으로 강제 고정
+            force "com.google.android.gms:play-services-location:20.0.0"
+        }
+    }
+}

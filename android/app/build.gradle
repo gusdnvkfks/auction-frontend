@@ -111,6 +111,10 @@ android {
 
 dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
+    implementation "com.google.android.gms:play-services-location:20.0.0"
+    implementation (project(path: ":react-native-geolocation-service")) {
+        exclude group: "com.google.android.gms", module: "play-services-location"
+    }
     implementation("com.facebook.react:react-android")
 
     if (hermesEnabled.toBoolean()) {
