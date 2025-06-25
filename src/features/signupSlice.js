@@ -17,6 +17,7 @@ const initialState = {
         location: false,
         age14: false,
         marketing: false,
+        apppush: false,
     },
 }
 

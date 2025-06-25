@@ -14,12 +14,23 @@ import { TextInputMask } from 'react-native-masked-text';
 import axios from 'axios';
 import Config from 'react-native-config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import AppText from '../../components/AppText';
 import { AuthContext } from '../../contexts/AuthContext';
+import SafeTopWrapper from '../../components/SafeTopWrapper';
+import AngleHeader from '../../components/AngleHeader';
+import Toast from 'react-native-toast-message';
+
+// 아이콘
+import LeftAngle from '../../assets/images/common/left-angle.svg';
 
 const LoginPage = ({ navigation }) => {
     // API URL
     const apiUrl = Config.API_URL;
+    const toastOptions = {
+        position: 'bottom',
+        bottomOffset: 50,
+        visibilityTime: 2000,
+    };
+
     const [phoneNumber, setPhoneNumber] = useState('');
     const [certifyNumber, setCertifyNumber] = useState('');
     // 처음에는 전화번호 인풋창만 있다가, 전화번호 입력이 완료되면 그 때 인증번호 입력창이 나옴
@@ -33,6 +44,7 @@ const LoginPage = ({ navigation }) => {
     const [activeInput, setActiveInput] = useState(null);
     // 인증번호 입력 시 3분 제한 시간 두기
     const [timer, setTimer] = useState(180); // 180초 = 3분
+    const [loading, setLoading] = useState(false);
 
     const { setToken } = useContext(AuthContext); // 👈 이 줄 추가
 
@@ -177,6 +189,7 @@ const LoginPage = ({ navigation }) => {
 
     // 로그인 호출하기
     const loginApiCall = async () => {
+        console.log('로그인 호출');
         try {
             const res = await axios.post(`${apiUrl}/api/login`, 
                 {
@@ -203,8 +216,14 @@ const LoginPage = ({ navigation }) => {
                 routes: [{ name: 'Main' }],
             });
         } catch (error) {
-            console.log("login error : ", error);
-            Alert.alert('잠시 후 다시 시도해주세요.');
+            Toast.show({
+                ...toastOptions,
+                type: 'error',
+                text1: error.response.data.message,
+            });
+            console.log("login error : ", error.response.data.message);
+            // Alert.alert('잠시 후 다시 시도해주세요.');
+            return;
         }
         
     }
@@ -214,89 +233,101 @@ const LoginPage = ({ navigation }) => {
     const certifyInputRef = useRef(null);
 
     return (
-        <View style={{ flex: 1 }}>
-            <KeyboardAvoidingView
-                style={{ flex: 1 }}
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                keyboardVerticalOffset={0} // Android에서 생기는 미세 밀림 방지
-            >
-                <ScrollView
-                    contentContainerStyle={styles.container}
-                    keyboardShouldPersistTaps="handled"
+        <SafeTopWrapper>
+            <View style={{ flex: 1 }}>
+                <AngleHeader
+                    title="로그인"
+                    IconComponent={LeftAngle}
+                    onPress={() => navigation.goBack()}
+                />
+                <KeyboardAvoidingView
+                    style={{ flex: 1 }}
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    keyboardVerticalOffset={0} // Android에서 생기는 미세 밀림 방지
                 >
-                    <AppText style={styles.title}>전화번호 인증을 해주세요.</AppText>
+                    <ScrollView
+                        contentContainerStyle={styles.container}
+                        keyboardShouldPersistTaps="handled"
+                    >
+                        <Text style={styles.title}>전화번호 인증을 해주세요.</Text>
 
-                    {/* 전화번호 입력 */}
-                    <TextInputMask
-                        type={'custom'}
-                        options={{ mask: '999 9999 9999' }}
-                        placeholder='전화번호를 입력해주세요.'
-                        keyboardType='number-pad'
-                        maxLength={13}
-                        value={phoneNumber}
-                        onChangeText={setPhoneNumber}
-                        onFocus={() => setActiveInput('phone')}
-                        onBlur={() => setActiveInput(null)}
-                        editable={isPhoneEditable}
-                        style={[
-                        styles.input,
-                        !isPhoneEditable && styles.inputDisabled,
-                        ]}
-                    />
+                        {/* 전화번호 입력 */}
+                        <TextInputMask
+                            type={'custom'}
+                            options={{ mask: '999 9999 9999' }}
+                            placeholder='전화번호를 입력해주세요.'
+                            keyboardType='number-pad'
+                            maxLength={13}
+                            value={phoneNumber}
+                            onChangeText={setPhoneNumber}
+                            onFocus={() => setActiveInput('phone')}
+                            onBlur={() => setActiveInput(null)}
+                            editable={isPhoneEditable}
+                            style={[
+                                styles.input,
+                                !isPhoneEditable && styles.inputDisabled,
+                            ]}
+                        />
 
-                    {/* 인증번호 입력 */}
-                    {isPhoneComplete && (
-                        <>
-                        <View style={styles.otpContainer}>
-                            <View style={styles.inputWrapper}>
-                            <TextInputMask
-                                type={'custom'}
-                                options={{ mask: '999999' }}
-                                placeholder='인증번호를 입력해주세요.'
-                                style={styles.certifyInput}
-                                keyboardType='number-pad'
-                                maxLength={6}
-                                value={certifyNumber}
-                                onChangeText={setCertifyNumber}
-                                onFocus={() => setActiveInput('certify')}
-                                onBlur={() => setActiveInput(null)}
-                                refInput={input => {
-                                certifyInputRef.current = input;
-                                }}
-                            />
-                            <AppText style={styles.timerText}>
-                                {minutes}:{formattedSeconds}
-                            </AppText>
+                        {/* 인증번호 입력 */}
+                        {isPhoneComplete && (
+                            <>
+                            <View style={styles.otpContainer}>
+                                <View style={styles.inputWrapper}>
+                                <TextInputMask
+                                    type={'custom'}
+                                    options={{ mask: '999999' }}
+                                    placeholder='인증번호를 입력해주세요.'
+                                    style={styles.certifyInput}
+                                    keyboardType='number-pad'
+                                    maxLength={6}
+                                    value={certifyNumber}
+                                    onChangeText={setCertifyNumber}
+                                    onFocus={() => setActiveInput('certify')}
+                                    onBlur={() => setActiveInput(null)}
+                                    refInput={input => {
+                                    certifyInputRef.current = input;
+                                    }}
+                                />
+                                <Text style={styles.timerText}>
+                                    {minutes}:{formattedSeconds}
+                                </Text>
+                                </View>
                             </View>
-                        </View>
 
-                        <TouchableOpacity style={styles.reCertify} onPress={() => handleConfirm('reCertify')}>
-                            <AppText style={styles.reCertifyText}>인증번호 재발송</AppText>
-                        </TouchableOpacity>
-                        </>
-                    )}
-                </ScrollView>
-            </KeyboardAvoidingView>
+                            <TouchableOpacity style={styles.reCertify} onPress={() => handleConfirm('reCertify')}>
+                                <Text style={styles.reCertifyText}>인증번호 재발송</Text>
+                            </TouchableOpacity>
+                            </>
+                        )}
+                    </ScrollView>
+                </KeyboardAvoidingView>
 
-            {/* 확인 버튼 */}
-            {!isPhoneComplete && activeInput === 'phone' && (
-            <View style={[styles.confirmWrapper, phoneNumber.length < 13 && styles.inActiveComfirmBtn]}>
-                <TouchableOpacity onPress={() => handleConfirm('phone')}>
-                    <AppText style={styles.btnText}>확인</AppText>
-                </TouchableOpacity>
-            </View>
-            )}
-        
-
-            {isPhoneComplete && activeInput === 'certify' && (
-            <View style={[styles.confirmWrapper, certifyNumber.length < 6 && styles.inActiveComfirmBtn]}>
-                <TouchableOpacity onPress={() => handleConfirm('certify')}>
-                    <AppText style={styles.btnText}>완료</AppText>
-                </TouchableOpacity>
-            </View>
-            )}
+                {/* 확인 버튼 */}
+                {!isPhoneComplete && activeInput === 'phone' && (
+                <View style={[styles.confirmWrapper, phoneNumber.length < 13 && styles.inActiveComfirmBtn]}>
+                    <TouchableOpacity onPress={() => handleConfirm('phone')}>
+                        <Text style={styles.btnText}>확인</Text>
+                    </TouchableOpacity>
+                </View>
+                )}
             
-        </View>
+
+                {isPhoneComplete && activeInput === 'certify' && (
+                <View style={[styles.confirmWrapper, certifyNumber.length < 6 && styles.inActiveComfirmBtn]}>
+                    <TouchableOpacity onPress={() => handleConfirm('certify')}>
+                        <Text style={styles.btnText}>완료</Text>
+                    </TouchableOpacity>
+                </View>
+                )}
+                
+            </View>
+            {loading && (
+                <View style={styles.spinnerWrapper}>
+                    <ActivityIndicator size="large" color="#6495ED" />
+                </View>
+            )}
+        </SafeTopWrapper>
     );
 };
 
@@ -312,20 +343,15 @@ const styles = StyleSheet.create({
     },
     container: {
         flex: 1,
-        paddingTop: '30%',
+        paddingTop: '10%',
         backgroundColor: '#fff',
         position: 'relative',
     },
     title: {
-        fontSize: 24,
+        fontSize: 20,
         paddingLeft: '5%',
         marginBottom: '10%',
         color: '#333',
-        textShadowColor: '#6495ED',
-        textShadowOffset: { width: 0.7, height: 0 },
-        textShadowRadius: 0,
-        // 2) 글자를 조금 확대(scale)해서 두께 강조
-        transform: [{ scaleX: 1.0 }, { scaleY: 1.0 }],
     },
     input: {
         alignSelf: 'center',
@@ -336,7 +362,6 @@ const styles = StyleSheet.create({
         borderColor: '#ddd',
         borderRadius: 8,
         marginBottom: 12,
-        fontFamily: 'Hakgyoansim'
     },
     inputDisabled: {
         color: 'gray',
@@ -356,7 +381,7 @@ const styles = StyleSheet.create({
         backgroundColor: 'gray',
     },
     btnText: {
-        fontSize: 18
+        fontSize: 16
     },
     reCertify: {
         alignItems: 'center',
@@ -384,7 +409,6 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: '#ddd',
         borderRadius: 8,
-        fontFamily: 'Hakgyoansim'
     },
     timerText: {
         position: 'absolute',

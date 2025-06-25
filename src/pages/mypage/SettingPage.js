@@ -8,11 +8,11 @@ import axios from 'axios';
 import Config from 'react-native-config';
 import { AuthContext } from '../../contexts/AuthContext';
 import Toast from 'react-native-toast-message';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // 아이콘
 import LeftAngle from '../../assets/images/common/left-angle.svg';
 import RightAngle from '../../assets/images/common/right-angle.svg';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const SettingPage = ({ navigation, route }) => {
     const apiUrl = Config.API_URL;

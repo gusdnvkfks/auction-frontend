@@ -76,6 +76,7 @@ export default function TermsOfUsePage({ navigation }) {
             location: next,
             age14: next,
             marketing: next,
+            apppush: next,
         }));
     };
 
@@ -162,6 +163,12 @@ export default function TermsOfUsePage({ navigation }) {
                     value={consent.marketing}
                     onToggle={() => toggleConsent('marketing')}
                     onArrowPress={() => navigation.navigate('MarketingPolicy')}
+                />
+                <Checkbox
+                    label="(선택) 앱 PUSH 알림 동의"
+                    value={consent.apppush}
+                    onToggle={() => toggleConsent('apppush')}
+                    onArrowPress={() => navigation.navigate('AppPushPolicy')}
                 />
 
             </ScrollView>
