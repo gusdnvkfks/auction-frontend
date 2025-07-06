@@ -5,8 +5,11 @@ import {
     StyleSheet,
     TouchableOpacity,
     Image,
-    Dimensions
+    Dimensions,
+    InteractionManager
 } from 'react-native';
+
+import { requestLocationPermission } from '../../utils/location';
 
 const { width } = Dimensions.get('window');
 
@@ -30,10 +33,20 @@ const LandingPage = ({ navigation }) => {
 
             {/* 하단 그룹: 버튼 + 로그인 링크 */}
             <View style={styles.bottomGroup}>
-                <TouchableOpacity
+                {/* <TouchableOpacity
                     style={styles.startButton}
                     activeOpacity={0.8}
                     onPress={() => navigation.navigate('Location')}
+                > */}
+                <TouchableOpacity
+                    style={styles.startButton}
+                    activeOpacity={0.8}
+                    onPress={async () => {
+                        // 1) InteractionManager 로딩 이후에 권한 요청
+                        await InteractionManager.runAfterInteractions(requestLocationPermission);
+                        // 2) 권한 여부 상관없이 LocationPage 로 이동
+                        navigation.navigate('Location');
+                    }}
                 >
                     <Text style={styles.startButtonText}>시작하기</Text>
                 </TouchableOpacity>

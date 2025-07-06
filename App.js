@@ -1,9 +1,11 @@
+import { enableScreens } from 'react-native-screens';
+enableScreens();
 import React from 'react';
 import { Provider } from 'react-redux';
 import { store } from './src/app/store';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { NavigationContainer } from '@react-navigation/native';
-import { createStackNavigator } from '@react-navigation/stack';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AuthProvider } from './src/contexts/AuthContext';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import Toast, { BaseToast } from 'react-native-toast-message';
@@ -34,6 +36,7 @@ import InterceptorInitializer from './src/hooks/InterceptorInitializer';
 import EditProfilePage from './src/pages/mypage/EditProfilePage';
 import SettingPage from './src/pages/mypage/SettingPage';
 import BlockedUsersPage from './src/pages/mypage/BlockedUserPage';
+import PrivacyPolicyPage from './src/pages/terms/PrivacyPolicyPage';
 
 // 토스트 설정
 const toastConfig = {
@@ -57,7 +60,7 @@ const toastConfig = {
     ),
 };
 
-const Stack = createStackNavigator();
+const Stack = createNativeStackNavigator();
 
 export default function App() {
     return (
@@ -74,10 +77,15 @@ export default function App() {
                                         headerShown: false   // header: () => <HeaderLayout /> 제거
                                     }}
                                 >
-                                    <Stack.Screen name="Splash" component={SplashPage} options={{ headerShown: false }} initialParams={{ nextPage: "Landing", text: "" }}/>
+                                    <Stack.Screen name="Splash" component={SplashPage} options={{ headerShown: false, animation: 'none' }} initialParams={{ nextPage: "Landing", text: "" }}/>
                                     <Stack.Screen name="Landing" component={LandingPage} options={{ headerShown: false }} />
                                     <Stack.Screen name="Login" component={LoginPage} />
-                                    <Stack.Screen name="Location" component={LocationPage} />
+                                    {/* <Stack.Screen name="Location" component={LocationPage} /> */}
+                                    <Stack.Screen
+                                      name="Location"
+                                      component={LocationPage}
+                                      options={{ animation: 'none' }}
+                                    />
                                     <Stack.Screen name="Report" component={ReportReasonPage} options={{ headerShown: false }} />
                                     <Stack.Screen name="ReportConfirm" component={ReportConfirmPage} options={{ headerShown: false }} />
                                     <Stack.Screen name="Verify" component={VerifyPage} />
@@ -97,6 +105,7 @@ export default function App() {
                                     <Stack.Screen name="EditProfile" component={EditProfilePage} options={{ headerShown: false }} />
                                     <Stack.Screen name="Setting" component={SettingPage} options={{ headerShown: false }} />
                                     <Stack.Screen name="BlockedUsers" component={BlockedUsersPage} options={{ headerShown: false }} />
+                                    <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyPage} options={{ headerShown: false }} />
                                 </Stack.Navigator>
                             </ItemUploadProvider>
                         </NavigationContainer>

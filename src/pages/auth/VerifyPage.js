@@ -7,6 +7,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { setUserInfo } from '../../features/signupSlice';
 
 const VerifyPage = ({ navigation }) => {
+
     const dispatch = useDispatch();
     // Redux 상태 가져오기
     const userInfo = useSelector(state => state.signup.userInfo);
@@ -36,6 +37,7 @@ const VerifyPage = ({ navigation }) => {
 
     const certificationCallback = async (response) => {
         // console.log(response);
+        const { success, error_code, error_msg, imp_uid, merchant_uid } = response;
         if(response.success === "true") {
             const impToken = await getAccessToken();
             // console.log(impToken);
@@ -58,7 +60,11 @@ const VerifyPage = ({ navigation }) => {
             }
         }else {
             // 실패
-            navigation.goBack();
+            // if (navigation.canGoBack()) {
+            //     navigation.goBack();
+            // } else {
+            //     navigation.replace('TermsOfUse');
+            // }
         }
     }
 
@@ -80,3 +86,5 @@ const VerifyPage = ({ navigation }) => {
 }
 
 export default VerifyPage;
+
+

@@ -7,11 +7,15 @@ import {
   StyleSheet,
   ScrollView
 } from 'react-native';
-import AppText from '../../components/AppText';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import Config from 'react-native-config';
 import { useSelector, useDispatch } from 'react-redux';
 import { setConsent } from '../../features/signupSlice';
+import SafeTopWrapper from '../../components/SafeTopWrapper';
+import AngleHeader from '../../components/AngleHeader';
+
+// 아이콘
+import LeftAngle from '../../assets/images/common/left-angle.svg';
 
 const CHECKBOX_SIZE = 20;
 
@@ -23,7 +27,7 @@ const Checkbox = ({ label, value, onToggle, onArrowPress, arrowIconName = 'chevr
             <View style={[styles.checkbox, value && styles.checkboxChecked]}>
                 {value && <View style={styles.checkboxInner} />}
             </View>
-            <AppText style={styles.checkboxLabel}>{label}</AppText>
+            <Text style={styles.checkboxLabel}>{label}</Text>
         </TouchableOpacity>
 
         {/* 화살표가 필요한 경우만 */}
@@ -91,100 +95,108 @@ export default function TermsOfUsePage({ navigation }) {
     }
 
     return (
-        <View style={styles.wrapper}>
-            <ScrollView contentContainerStyle={styles.container}>
-                {/* 1. 설명 문구 영역 */}
-                <View style={styles.noticeContainer}>
-                    <Text style={styles.noticeText}>
-                        <Text style={styles.title}>'가치매김' </Text>
-                        서비스를 이용하기 위한 동의가 필요해요.{'\n'}
-                    </Text>
-                    <Text style={styles.description}>개인정보 수집 및 활용, 서비스 이용약관, 본인확인, 위치정보,{'\n'} 마케팅 정보(선택) 등을 포함합니다.</Text>
-                </View>
+        <SafeTopWrapper>
+            <AngleHeader
+                title="약관 동의"
+                IconComponent={LeftAngle}
+                onPress={() => navigation.goBack()}
+            />
 
-                {/* 1) 전체 동의 */}
-                <Checkbox
-                    label="전체 동의"
-                    value={allChecked}
-                    onToggle={toggleAll}
-                />
-                {/* 2) 개별 동의 + 화살표 */}
-                <Checkbox
-                    label="(필수) 개인정보 수집 및 활용"
-                    value={consent.privacy}
-                    onToggle={() => toggleConsent('privacy')}
-                    onArrowPress={() => navigation.navigate('PrivacyPolicy')}
-                />
-                <Checkbox
-                    label="(필수) 서비스 이용약관"
-                    value={consent.terms}
-                    onToggle={() => toggleConsent('terms')}
-                    onArrowPress={() => navigation.navigate('TermsService')}
-                />
-                <Checkbox
-                    label="(필수) 본인확인 서비스 동의사항"
-                    value={consent.verification}
-                    onToggle={() => toggleConsent('verification')}
-                    onArrowPress={() => setVerificationExpanded(v => !v)}
-                    arrowIconName={verificationExpanded ? 'chevron-up' : 'chevron-down'}
-                />
-                {verificationExpanded && (
-                    <View style={styles.subContent}>
-                        <TouchableOpacity onPress={() => subCertificationContent('certification')}>
-                            <AppText style={styles.subItem}>본인확인 서비스 동의사항</AppText>
-                        </TouchableOpacity>
-                        <TouchableOpacity onPress={() => subCertificationContent('mobile')}>
-                            <AppText style={styles.subItem}>통신사 이용 약관</AppText>
-                        </TouchableOpacity>
-                        <TouchableOpacity onPress={() => subCertificationContent('identifier')}>
-                            <AppText style={styles.subItem}>고유식별정보 처리 동의</AppText>
-                        </TouchableOpacity>
-                        <TouchableOpacity onPress={() => subCertificationContent('offering')}>
-                            <AppText style={styles.subItem}>개인정보 제3자 제공 동의</AppText>
-                        </TouchableOpacity>
-                        <TouchableOpacity onPress={() => subCertificationContent('entrust')}>
-                            <AppText style={styles.subItem}>개인정보 수집·이용·위탁 동의</AppText>
-                        </TouchableOpacity>
+            <View style={styles.wrapper}>
+                <ScrollView contentContainerStyle={styles.container}>
+                    {/* 1. 설명 문구 영역 */}
+                    <View style={styles.noticeContainer}>
+                        <Text style={styles.noticeText}>
+                            <Text style={styles.title}>'가치매김' </Text>
+                            서비스를 이용하기 위한 동의가 필요해요.{'\n'}
+                        </Text>
+                        <Text style={styles.description}>개인정보 수집 및 활용, 서비스 이용약관, 본인확인, 위치정보, 마케팅 정보(선택) 등을 포함합니다.</Text>
                     </View>
-                )}
-                <Checkbox
-                    label="(필수) 위치기반 서비스 이용약관"
-                    value={consent.location}
-                    onToggle={() => toggleConsent('location')}
-                    onArrowPress={() => navigation.navigate('LocationService')}
-                />
-                <Checkbox
-                    label="(필수) 만 14세 이상"
-                    value={consent.age14}
-                    onToggle={() => toggleConsent('age14')}
-                />
-                <Checkbox
-                    label="(선택) 마케팅 활용 수신 동의"
-                    value={consent.marketing}
-                    onToggle={() => toggleConsent('marketing')}
-                    onArrowPress={() => navigation.navigate('MarketingPolicy')}
-                />
-                <Checkbox
-                    label="(선택) 앱 PUSH 알림 동의"
-                    value={consent.apppush}
-                    onToggle={() => toggleConsent('apppush')}
-                    onArrowPress={() => navigation.navigate('AppPushPolicy')}
-                />
 
-            </ScrollView>
+                    {/* 1) 전체 동의 */}
+                    <Checkbox
+                        label="전체 동의"
+                        value={allChecked}
+                        onToggle={toggleAll}
+                    />
+                    {/* 2) 개별 동의 + 화살표 */}
+                    <Checkbox
+                        label="(필수) 개인정보 수집 및 활용"
+                        value={consent.privacy}
+                        onToggle={() => toggleConsent('privacy')}
+                        onArrowPress={() => navigation.navigate('PrivacyPolicy')}
+                    />
+                    <Checkbox
+                        label="(필수) 서비스 이용약관"
+                        value={consent.terms}
+                        onToggle={() => toggleConsent('terms')}
+                        onArrowPress={() => navigation.navigate('TermsService')}
+                    />
+                    <Checkbox
+                        label="(필수) 본인확인 서비스 동의사항"
+                        value={consent.verification}
+                        onToggle={() => toggleConsent('verification')}
+                        onArrowPress={() => setVerificationExpanded(v => !v)}
+                        arrowIconName={verificationExpanded ? 'chevron-up' : 'chevron-down'}
+                    />
+                    {verificationExpanded && (
+                        <View style={styles.subContent}>
+                            <TouchableOpacity onPress={() => subCertificationContent('certification')}>
+                                <Text style={styles.subItem}>본인확인 서비스 동의사항</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity onPress={() => subCertificationContent('mobile')}>
+                                <Text style={styles.subItem}>통신사 이용 약관</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity onPress={() => subCertificationContent('identifier')}>
+                                <Text style={styles.subItem}>고유식별정보 처리 동의</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity onPress={() => subCertificationContent('offering')}>
+                                <Text style={styles.subItem}>개인정보 제3자 제공 동의</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity onPress={() => subCertificationContent('entrust')}>
+                                <Text style={styles.subItem}>개인정보 수집·이용·위탁 동의</Text>
+                            </TouchableOpacity>
+                        </View>
+                    )}
+                    <Checkbox
+                        label="(필수) 위치기반 서비스 이용약관"
+                        value={consent.location}
+                        onToggle={() => toggleConsent('location')}
+                        onArrowPress={() => navigation.navigate('LocationService')}
+                    />
+                    <Checkbox
+                        label="(필수) 만 14세 이상"
+                        value={consent.age14}
+                        onToggle={() => toggleConsent('age14')}
+                    />
+                    <Checkbox
+                        label="(선택) 마케팅 활용 수신 동의"
+                        value={consent.marketing}
+                        onToggle={() => toggleConsent('marketing')}
+                        onArrowPress={() => navigation.navigate('MarketingPolicy')}
+                    />
+                    <Checkbox
+                        label="(선택) 앱 PUSH 알림 동의"
+                        value={consent.apppush}
+                        onToggle={() => toggleConsent('apppush')}
+                        onArrowPress={() => navigation.navigate('AppPushPolicy')}
+                    />
 
-            {/* 3) 하단 고정 "다음" 버튼 */}
-            <TouchableOpacity
-                style={[
-                    styles.submitButton,
-                    !allRequiredChecked && styles.submitDisabled
-                ]}
-                onPress={onSubmit}
-                disabled={!allRequiredChecked}
-            >
-                <AppText style={styles.submitText}>다음</AppText>
-            </TouchableOpacity>
-        </View>
+                </ScrollView>
+
+                {/* 3) 하단 고정 "다음" 버튼 */}
+                <TouchableOpacity
+                    style={[
+                        styles.submitButton,
+                        !allRequiredChecked && styles.submitDisabled
+                    ]}
+                    onPress={onSubmit}
+                    disabled={!allRequiredChecked}
+                >
+                    <Text style={styles.submitText}>다음</Text>
+                </TouchableOpacity>
+            </View>
+        </SafeTopWrapper>
     )
 }
 
@@ -192,7 +204,6 @@ const styles = StyleSheet.create({
     wrapper: {
         flex: 1,
         paddingHorizontal: 16,
-        paddingTop: 48,
     },
     title: {
         fontSize: 16,
@@ -210,7 +221,7 @@ const styles = StyleSheet.create({
         borderRadius: 8,
     },
     noticeText: {
-        fontSize: 14,
+        fontSize: 13,
         lineHeight: 20,
         color: '#444',
     },
@@ -246,7 +257,7 @@ const styles = StyleSheet.create({
         borderRadius: 2,
     },
     checkboxLabel: {
-        fontSize: 16,
+        fontSize: 13,
     },
     arrowContainer: {
         marginLeft: 'auto',
@@ -268,7 +279,7 @@ const styles = StyleSheet.create({
         borderRadius: 24,
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 50,
+        marginBottom: 30,
     },
     submitDisabled: {
         backgroundColor: '#ccc',
