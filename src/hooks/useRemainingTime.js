@@ -8,6 +8,7 @@ const useRemainingTime = (endTime) => {
     const [remainingText, setRemainingText] = useState('');
 
     useEffect(() => {
+        console.log(endTime);
         if(!endTime) return;
 
         const isManual = endTime === '9999-12-31T23:59:59.000Z';

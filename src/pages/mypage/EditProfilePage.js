@@ -221,8 +221,6 @@ const EditProfilePage = ( {navigation }) => {
                     },
                 });
 
-                console.log(res);
-
                 if(res.data.result === "success") {
                     Toast.show({
                         ...toastOptions,

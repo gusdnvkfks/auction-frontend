@@ -5,7 +5,6 @@ import MaterialIcon from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import axios from 'axios';
 import Config from 'react-native-config';
-import AppText from '../../components/AppText';
 
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -20,6 +19,9 @@ import Toast from 'react-native-toast-message';
 import { AuthContext } from '../../contexts/AuthContext';
 
 import useRemainingTime from '../../hooks/useRemainingTime';
+
+// SVG 아이콘
+import UserNoImgIcon from '../../assets/images/user/noImgUser.svg';
 
 dayjs.extend(relativeTime);
 dayjs.locale('ko');
@@ -69,17 +71,13 @@ const ItemDetailPage = () => {
         // 경매 물품 상세 조회
         if(!itemId) {
             // itemId가 없으면 안되니까 백
-            Alert.alert(
-                "알림",
-                "해당 경매물품을 조회할 수 없습니다.",
-                [
-                    {
-                        text: "확인",
-                        onPress: () => navigation.goBack(),  // ✅ 버튼 눌렀을 때만 뒤로가기
-                    },
-                ],
-                { cancelable: false }
-            );
+            Toast.show({
+                ...toastOptions,
+                type: 'error',
+                text1: '해당 경매물품을 조회할 수 없습니다.',
+            });
+
+            navigation.goBack()
         }
 
         // 조회수는 비동기로 그냥 던지고
@@ -139,6 +137,7 @@ const ItemDetailPage = () => {
             if(res.data.result === "success") {
                 // 조회 성공
                 setItem(res.data.item);
+                console.log(res.data.item);
                 // 수정 권한 처리
                 setIsAuthority(res.data.authority);
                 // 찜 아이콘 처리
@@ -148,17 +147,13 @@ const ItemDetailPage = () => {
                 }
             }
         } catch (err) {
-            Alert.alert(
-                "알림",
-                "경매 물품을 조회하지 못했습니다. \n잠시 후 다시 시도해주세요.",
-                [
-                    {
-                        text: "확인",
-                        onPress: () => navigation.goBack(),  // ✅ 버튼 눌렀을 때만 뒤로가기
-                    },
-                ],
-                { cancelable: false }
-            );
+            Toast.show({
+                ...toastOptions,
+                type: 'error',
+                text1: '경매 물품을 조회하지 못했습니다. \n잠시 후 다시 시도해주세요.',
+            });
+
+            navigation.goBack();
         }finally {
             setLoading(false);
         }
@@ -187,7 +182,11 @@ const ItemDetailPage = () => {
             );
             setIsFavorite(prev => !prev); // UI만 토글
         }catch (err) {
-            Alert.alert("알림", "찜 상태 변경에 실패했습니다.");
+            Toast.show({
+                ...toastOptions,
+                type: 'error',
+                text1: '찜 상태 변경에 실패했습니다.',
+            });
         }finally {
             setLoading(false);
         }
@@ -350,7 +349,6 @@ const ItemDetailPage = () => {
 
     // 입찰 모달 열기
     const openBidModal = () => {
-        
         switch (item.state) {
             case 0:
                 Toast.show({ ...toastOptions, type: 'error', text1: '경매 시작전 상품 입니다.' });
@@ -360,6 +358,9 @@ const ItemDetailPage = () => {
                 return;
             case 3:
                 Toast.show({ ...toastOptions, type: 'error', text1: '판매가 완료된 상품 입니다.' });
+                return;
+            case 4:
+                Toast.show({ ...toastOptions, type: 'error', text1: '이미 마감된 경매 입니다.' });
                 return;
             default:
                 break;
@@ -394,10 +395,20 @@ const ItemDetailPage = () => {
             case 3:
                 Toast.show({ ...toastOptions, type: 'error', text1: '판매가 완료된 상품 입니다.' });
                 return;
+            case 4:
+                Toast.show({ ...toastOptions, type: 'error', text1: '이미 마감된 경매 입니다.' });
+                return;
             default:
                 break;
         }
-        
+        if(isAuthority === true) {
+            Toast.show({
+                ...toastOptions,
+                type: 'error',
+                text1: '내 경매 물품에는 낙찰을 받을 수 없습니다.',
+            });
+            return;
+        }
         setIsSuccessfullBidModalVisible(true);
     }
     // 낙찰 모달 닫기
@@ -416,7 +427,7 @@ const ItemDetailPage = () => {
             }
 
             setLoading(false);
-            const res = await axios.post(`${apiUrl}/api/bid/successBid`, 
+            const res = await axios.post(`${apiUrl}/api/bid/success-bid`, 
                 {
                     itemId: itemId,
                     buyNowPrice: item.buyNowPrice,
@@ -435,13 +446,14 @@ const ItemDetailPage = () => {
                 Toast.show({
                     ...toastOptions,
                     type: 'success',
-                    text1: '본 물품에 낙찰되었습니다. \n경매자와 채팅을 통해 거래약속을 잡으세요.',
+                    text1: '본 물품에 낙찰되었습니다.',
+                    text2: '경매자와 채팅을 통해 거래약속을 잡으세요.',
                 });
                 setItem(res.data.item);
                 closeSuccessfullBidModal();
             }
         }catch (error) {
-            // console.log(error);
+            console.log(error.response);
             closeSuccessfullBidModal();
             const errorCode = error.response?.data?.errorCode;
 
@@ -474,7 +486,7 @@ const ItemDetailPage = () => {
                     Toast.show({ ...toastOptions, type: 'error', text1: '설정된 즉시 구매가와 일치하지 않습니다.' });
                     break;
                 default:
-                    Toast.show({ ...toastOptions, type: 'error', text1: '낙찰에에 실패했습니다.' });
+                    Toast.show({ ...toastOptions, type: 'error', text1: '낙찰에 실패했습니다.' });
                     break;
             }
         }finally {
@@ -646,8 +658,8 @@ const ItemDetailPage = () => {
                     <ScrollView 
                         style={{ flex: 1 }}
                         contentContainerStyle={{ 
-                            paddingBottom: 140,
-                            minHeight: Dimensions.get('window').height - HEADER_HEIGHT,
+                            paddingBottom: "25%",
+                            flexGrow: 1,           
                         }}
                         onScroll={handleScroll}
                         scrollEventThrottle={16}
@@ -682,7 +694,7 @@ const ItemDetailPage = () => {
                                                 <Text style={styles.overlayText}>낙찰완료</Text>
                                             </View>
                                         )}
-                                        {/* ✅ 판매완료료 완료 오버레이 */}
+                                        {/* ✅ 판매 완료 오버레이 */}
                                         {item.state === 3 && (
                                             <View style={styles.overlay}>
                                                 <Image
@@ -693,6 +705,16 @@ const ItemDetailPage = () => {
                                                 <Text style={styles.overlayText}>판매완료</Text>
                                             </View>
                                         )}
+                                        {item.state === 4 && (
+                                            <View style={styles.overlay}>
+                                                <Image
+                                                    source={require('../../assets/images/logo.png')} // 경매봉 이미지
+                                                    style={styles.gavel}
+                                                    resizeMode="contain"
+                                                />
+                                                <Text style={styles.overlayText}>경매마감</Text>
+                                            </View>
+                                        )}
                                     </TouchableOpacity>
                                 ))}
                             </ScrollView>
@@ -701,14 +723,24 @@ const ItemDetailPage = () => {
                         {/* 유저 정보 */}
                         <View style={styles.userInfo}>
                             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                <Image style={styles.avatar} />
+                                <View style={styles.avatarWrapper}>
+                                    {item?.user?.thumbnailImg ? (
+                                        <Image
+                                            source={{ uri: item?.user?.thumbnailImg }}
+                                            style={styles.avatar}
+                                            resizeMode="cover"
+                                        />
+                                    ) : (
+                                        <UserNoImgIcon width={60} height={60} />
+                                    )}
+                                </View>
                                 <View>
-                                    <AppText style={styles.nickname}>{item?.user?.nickname}</AppText>
-                                    <AppText style={styles.location}>{item?.user?.city} {item?.user?.gu} {item?.user?.dong}</AppText>
+                                    <Text style={styles.nickname}>{item?.user?.nickname}</Text>
+                                    <Text style={styles.location}>{item?.user?.city} {item?.user?.gu} {item?.user?.dong}</Text>
                                 </View>
                             </View>
                             <View style={styles.viewLikeBox}>
-                                <AppText style={styles.viewLikeText}>조회 {item?.viewCount ?? 0} · 찜 {item?._count?.favorites ?? 0}</AppText>
+                                <Text style={styles.viewLikeText}>조회 {item?.viewCount ?? 0} · 찜 {item?._count?.favorites ?? 0}</Text>
                             </View>
                         </View>
 
@@ -723,12 +755,6 @@ const ItemDetailPage = () => {
                             {item?.description}
                         </Text>
 
-                        {/* 거래 희망장소 -> 지금 당장은 없어서 주석 처리 */}
-                        {/* <View style={styles.locationBox}>
-                            <Text style={styles.label}>거래희망장소</Text>
-                            <Text style={styles.place}>주안캐슬앤더샵 에듀포레</Text>
-                        </View> */}
-
                         <View 
                             style={[
                                 styles.infoRow,
@@ -741,67 +767,72 @@ const ItemDetailPage = () => {
                                 <View style={styles.bidNoticeBox}>
                                     <View style={styles.bidNoticeRow}>
                                         {item?._count?.bids > 0 && (
-                                            <AppText style={styles.bidNoticeText}>
+                                            <Text style={styles.bidNoticeText}>
                                                 {item?._count?.bids}명 입찰 중!
-                                            </AppText>
+                                            </Text>
                                         )}
-                                        <AppText style={styles.rightText}>
-                                            {/* {getRemainingTimeText(item?.endTime)}  */}
-                                            마감까지 {remainingText} 
-                                        </AppText>
+                                        <Text style={styles.rightText}>
+                                            {
+                                                remainingText === '경매 마감됨'
+                                                    ? remainingText
+                                                    : `마감까지 ${remainingText}`
+                                            }
+                                        </Text>
                                     </View>
                                 </View>
                             )}
 
                             {item?.state === 2 && (
                                 <View style={styles.bidNoticeBox}>
-                                    <AppText style={[
+                                    <Text style={[
                                         styles.bidNoticeText,
                                         { color: "red" }
                                     ]}>
                                         낙찰된 상품입니다.
-                                    </AppText>
+                                    </Text>
                                 </View>
                             )}
                         </View>
 
                         <View style={styles.priceContainer}>
                             <View style={styles.priceBox}>
-                                <AppText style={styles.priceLabel}>경매 시작가</AppText>
-                                <AppText style={styles.priceValue}>
+                                <Text style={styles.priceLabel}>경매 시작가</Text>
+                                <Text style={styles.priceValue}>
                                     {item?.startPrice?.toLocaleString()}원
-                                </AppText>
+                                </Text>
                             </View>
                             <View style={styles.priceBox}>
-                                <AppText style={styles.priceLabel}>
-                                    <AppText style={styles.priceLabel}>
+                                <Text style={styles.priceLabel}>
+                                    <Text style={styles.priceLabel}>
                                         {{
                                             0: '경매 대기 중',
                                             1: '현재 입찰가',
                                             2: '낙찰가',
                                             3: '경매 완료',
+                                            4: '경매 마감',
                                         }[item?.state] ?? ''}
-                                    </AppText>
-                                </AppText>
+                                    </Text>
+                                </Text>
                                 {item?.currentPrice > 0 ? (
                                     <>
-                                        <AppText style={styles.priceValue}>
+                                        <Text style={styles.priceValue}>
                                             {item.currentPrice.toLocaleString()}원
-                                            {/* {item?._count?.bids > 0 && ` · ${item._count.bids}명 입찰 중`} */}
-                                        </AppText>
+                                        </Text>
                                     </>
                                 ) : (
                                     <>
-                                        <AppText style={styles.firstBidText}>첫 입찰자가 되어주세요!</AppText>
+                                        <Text style={styles.firstBidText}>
+                                            {item?.state === 4 ? '-' : '첫 입찰자가 되어주세요!'}
+                                        </Text>
                                     </>
                                 )}
                             </View>
                             {item?.isBidUnit === 1 && (
                                 <View style={styles.priceBox}>
-                                    <AppText style={styles.priceLabel}>입찰 단위</AppText>
-                                    <AppText style={styles.priceValue}>
+                                    <Text style={styles.priceLabel}>입찰 단위</Text>
+                                    <Text style={styles.priceValue}>
                                         {item?.bidUnit?.toLocaleString()}원
-                                    </AppText>
+                                    </Text>
                                 </View>
                             )}
                         </View>
@@ -809,7 +840,7 @@ const ItemDetailPage = () => {
                 </View>
 
                 {/* 하단 버튼 */}
-                <View style={[styles.bottomBar, { paddingBottom: 36 }]}>
+                <View style={[styles.bottomBar, { paddingBottom: 20 }]}>
                     <TouchableOpacity style={styles.likeBtn} onPress={changeFavoriteItem}>
                         <Icon name={isFavorite ? 'heart' : 'heart-o'} size={24} color="#F05650" />
                     </TouchableOpacity>
@@ -818,9 +849,22 @@ const ItemDetailPage = () => {
                             <TouchableOpacity style={[styles.bidBtn, item.state !== 1 && styles.disabledBtn]} onPress={openBidModal}>
                                 <Text style={styles.bidText}>입찰하기</Text>
                             </TouchableOpacity>
-                            <TouchableOpacity style={[styles.bidBtn, { marginLeft: 20, backgroundColor: '#FAFAD2' }, item.state !== 1 && styles.disabledBtn]} onPress={openSuccessfullBidModal} >
-                                <Text style={[styles.bidText, { color: '#333333'}]}>즉시 낙찰받기</Text>
-                                <Text style={{ fontSize: 12, color: 'gray' }}>즉시구매가({item?.buyNowPrice.toLocaleString()}원) </Text>
+                            <TouchableOpacity 
+                                style={[
+                                    styles.bidBtn,
+                                    {
+                                        marginLeft: 20,
+                                        backgroundColor: '#fff',
+                                        borderWidth: 1,             // ← 전체 테두리 굵기
+                                        borderColor: '#6495ED',     // ← 원하는 테두리 색
+                                        borderRadius: 8,            // ← 모서리 둥글기
+                                    },
+                                    item.state !== 1 && styles.disabledBtn,
+                                ]}
+                                onPress={openSuccessfullBidModal}
+                            >
+                                <Text style={[styles.bidText, { color: '#6494ED'}]}>즉시 낙찰받기</Text>
+                                <Text style={{ fontSize: 10, color: 'gray' }}>즉시구매가({item?.buyNowPrice.toLocaleString()}원) </Text>
                             </TouchableOpacity>
                         </View>
                     ) : (
@@ -867,11 +911,15 @@ const ItemDetailPage = () => {
 
                             {item?.isBidUnit === 1 ? (
                                 <Text style={styles.yourBid}>
-                                    내 입찰가: {(
-                                        (item.currentPrice === 0 
-                                        ? item.startPrice 
-                                        : item.currentPrice + item.bidUnit)
-                                    ).toLocaleString()}원
+                                    내 입찰가:{" "}
+                                    <Text style={styles.yourBidNumber}>
+                                        {(
+                                        item.currentPrice === 0 
+                                            ? item.startPrice 
+                                            : item.currentPrice + item.bidUnit
+                                        ).toLocaleString()}
+                                    </Text>
+                                    원
                                 </Text>
                             ) : (
                                 <>
@@ -905,13 +953,20 @@ const ItemDetailPage = () => {
                         <View style={styles.bidModal}>
                             <Text style={styles.bidModalTitle}>즉시 낙찰받기</Text>
 
-                            <Text style={styles.currentPrice}>
+                            {/* <Text style={styles.currentPrice}>
                                 즉시 구매가: {item?.buyNowPrice?.toLocaleString()}원
+                            </Text> */}
+                            <Text style={styles.currentPrice}>
+                                즉시 구매가:{" "}
+                                <Text style={styles.priceNumber}>
+                                    {item?.buyNowPrice?.toLocaleString()}
+                                </Text>
+                                원
                             </Text>
 
                             <Text style={styles.warningText}>
-                                즉시 낙찰 시 본 상품은 더 이상 입찰이 불가능하며,{'\n'}
-                                낙찰이 확정됩니다. 진행하시겠습니까?
+                                낙찰 시 본 상품은 더 이상 입찰이 불가능하며,{'\n'}
+                                단순 변심으로 낙찰 포기 시 신뢰지수가 {'\n'}하락하는 패널티가 있을 수 있습니다.
                             </Text>
 
                             {/* 버튼 영역 */}
@@ -1016,18 +1071,15 @@ const styles = StyleSheet.create({
     gavel: {
         width: 160,
         height: 160,
-        // transform: [{ rotate: '30deg' }],
         opacity: 0.6,
     },
     overlayText: {
-        // position: 'absolute',
         fontSize: 36,
         fontWeight: 'bold',
         color: '#fff',
         textShadowColor: 'rgba(0, 0, 0, 0.7)',
         textShadowOffset: { width: 2, height: 2 },
         textShadowRadius: 4,
-        // transform: [{ rotate: '30deg' }], // ← ✅ 대각선으로 회전
         letterSpacing: 20,
         opacity: 0.6,
     },
@@ -1041,20 +1093,15 @@ const styles = StyleSheet.create({
     disabledBtn: {
         opacity: 0.6,
     },
-    // userInfo: {
-    //     flexDirection: 'row',
-    //     padding: 16,
-    //     borderBottomWidth: 1,
-    //     borderColor: '#ddd',
-    //     alignItems: 'center',
-    // },
     nickname: {
-        fontSize: 18,
+        fontSize: 14,
         marginBottom: 5,
+        fontWeight: 'bold',
+        color: "black",
     },
     location: {
         color: '#777',
-        fontSize: 14,
+        fontSize: 12,
     },
     avatar: {
         width: 48,
@@ -1077,7 +1124,7 @@ const styles = StyleSheet.create({
     },
 
     viewLikeText: {
-        fontSize: 13,
+        fontSize: 11,
         color: '#666',
     },
     titleBox: {
@@ -1089,6 +1136,7 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 18,
         fontWeight: 'bold',
+        color: "black",
     },
     time: {
         fontSize: 13,
@@ -1097,7 +1145,7 @@ const styles = StyleSheet.create({
     description: {
         paddingHorizontal: 16,
         paddingBottom: 16,
-        fontSize: 16,
+        fontSize: 13,
         color: '#333',
     },
     locationBox: {
@@ -1128,7 +1176,7 @@ const styles = StyleSheet.create({
         paddingBottom: 5,
     },
     bidNoticeText: {
-        fontSize: 14,
+        fontSize: 12,
         fontWeight: '500',
         color: '#6495ED',
     },
@@ -1138,7 +1186,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     rightText: {
-        fontSize: 14,
+        fontSize: 12,
         color: '#666', // 원하면 다른 색상
         fontWeight: '400',
     },
@@ -1147,7 +1195,7 @@ const styles = StyleSheet.create({
         borderTopWidth: 1,
         borderTopColor: '#eee',
         paddingTop: 12,
-        marginTop: 24,
+        marginTop: 12,
         justifyContent: 'space-around',
     },
     priceBox: {
@@ -1155,19 +1203,20 @@ const styles = StyleSheet.create({
         flex: 1, // 각 항목 너비 동일하게
     },
     priceLabel: {
-        fontSize: 14,
+        fontSize: 12,
         color: '#888',
         marginBottom: 4,
     },
     priceValue: {
-        fontSize: 14,
+        fontSize: 12,
         fontWeight: 'bold',
         color: '#222',
     },
     firstBidText: {
-        fontSize: 13,
+        fontSize: 12,
         color: '#6495ED',
         marginTop: 4,
+        fontWeight: 'bold',
     },
     subInfo: {
         fontSize: 11,
@@ -1210,7 +1259,7 @@ const styles = StyleSheet.create({
     },
     bidText: {
         color: '#fff',
-        fontSize: 16,
+        fontSize: 14,
         fontWeight: 'bold',
     },
     modalOverlay: {
@@ -1227,18 +1276,25 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     bidModalTitle: {
-        fontSize: 18,
+        fontSize: 16,
         fontWeight: 'bold',
         marginBottom: 16,
     },
     currentPrice: {
-        fontSize: 16,
+        fontSize: 14,
         marginBottom: 8,
     },
+    priceNumber: {
+        color: "#6496ED",
+        fontWeight: "bold",
+    },
     yourBid: {
-        fontSize: 16,
+        fontSize: 14,
         fontWeight: 'bold',
         color: '#333',
+    },
+    yourBidNumber: {
+        color: '#6495ED',
     },
     label: {
         alignSelf: 'flex-start',
@@ -1287,7 +1343,7 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
     },
     warningText: {
-        fontSize: 13,
+        fontSize: 11,
         color: '#666',
         textAlign: 'center',
         marginBottom: 10,
@@ -1303,5 +1359,19 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         backgroundColor: 'rgba(255,255,255,0.5)',
         zIndex: 999,
+    },
+    avatarWrapper: {
+        width: 40,
+        height: 40,
+        borderRadius: 30,
+        backgroundColor: '#ddd',
+        overflow: 'hidden',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 10,
+    },
+    avatar: {
+        width: '100%',
+        height: '100%',
     },
 });

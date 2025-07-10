@@ -1,5 +1,3 @@
-// src/pages/common/LocationPage.js
-
 import React, { useEffect, useState, useRef } from 'react';
 import {
     View,
@@ -34,6 +32,7 @@ const LocationPage = ({ navigation }) => {
 
     const [searchText, setSearchText] = useState('');
     const [nearbyList, setNearbyList] = useState([]);
+    const [liName, setLiName] = useState("");
     const [loading, setLoading] = useState(false);
     const [showSpinner, setShowSpinner] = useState(false);
 
@@ -76,7 +75,6 @@ const LocationPage = ({ navigation }) => {
                 const docs = res.data.documents;
                 if (docs.length > 0) {
                     const first = docs[0];
-                    // setAddressAndNavigate(first);
                     await fetchNearby(first);
                 }
             } catch (err) {
@@ -146,7 +144,6 @@ const LocationPage = ({ navigation }) => {
                 },
                 headers: { 'Content-Type': 'application/json' },
             });
-            console.log(res.data.addressList);
             if (res.data.result === 'success') {
                 setNearbyList(res.data.addressList);
             }
@@ -159,7 +156,6 @@ const LocationPage = ({ navigation }) => {
 
     const handleSearchSubmit = () => {
         Keyboard.dismiss();
-        // 이미 디바운스 로직가 있으므로 추가 구현 불필요
     };
 
     const handleSkip = () => {
@@ -181,6 +177,11 @@ const LocationPage = ({ navigation }) => {
             <Text style={styles.addressText}>
                 {item.sidoName} {item.sigunguName} {item.dongName}
             </Text>
+            {item.liName ? (
+                <Text style={styles.liText}>
+                    {item.liName}
+                </Text>
+            ) : null}
         </TouchableOpacity>
     );
 
@@ -284,13 +285,13 @@ const styles = StyleSheet.create({
     currentButtonInner: { flexDirection: 'row', alignItems: 'center' },
     currentButtonText: { color: '#fff', fontSize: 16 },
     listItem: {
-        height: 48,
-        justifyContent: 'center',
         paddingHorizontal: 16,
+        paddingVertical: 12,
         borderBottomWidth: 1,
         borderColor: '#eee',
     },
-    addressText: { fontSize: 12 },
+    addressText: { fontSize: 12, color: '#333' },
+    liText: { fontSize: 10, color: '#888', marginTop: 2 },
     placeholderText: {
         fontSize: 14,
         color: '#aaa',

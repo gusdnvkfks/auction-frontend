@@ -1,15 +1,22 @@
-import { useEffect, useState, useContext } from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import React, { useState, useContext, useCallback } from 'react';
+import {
+    View,
+    Text,
+    Image,
+    TouchableOpacity,
+    StyleSheet,
+    ScrollView,
+    ActivityIndicator
+} from 'react-native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import SafeTopWrapper from '../../components/SafeTopWrapper';
-import { useNavigation } from '@react-navigation/native';
-
 import axios from 'axios';
 import Config from 'react-native-config';
-import { AuthContext } from '../../contexts/AuthContext';
 import Toast from 'react-native-toast-message';
-
-// 아이콘
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { AuthContext } from '../../contexts/AuthContext';
+
+// SVG 아이콘
 import UserNoImgIcon from '../../assets/images/user/noImgUser.svg';
 import SettingIcon from '../../assets/images/common/setting.svg';
 
@@ -24,83 +31,111 @@ const MyPage = () => {
     };
 
     const [myInfo, setMyInfo] = useState(null);
-    const [reSetting, setReSetting] = useState(false);
     const [loading, setLoading] = useState(false);
 
-    useEffect(() => {
-        // 토큰으로 내 정보 가져오기
-        getMyInfo();
-    }, [reSetting]);
-
-    // 내 정보 조회
+    // 사용자 정보 조회
     const getMyInfo = async () => {
+        if (!token) {
+            Toast.show({
+                ...toastOptions,
+                type: 'error',
+                text1: '로그인 정보가 없습니다.',
+            });
+            return;
+        }
+
         setLoading(true);
         try {
-            const res = await axios(`${apiUrl}/api/user`,
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                        "Content-Type": "application/json"
-                    }
-                }
-            );
-            if(res.data.result === "success") {
+            const res = await axios.get(`${apiUrl}/api/user`, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+            if (res.data.result === 'success') {
                 setMyInfo(res.data.user);
+            } else {
+                throw new Error(res.data.message || '조회 실패');
             }
-        }catch (error) {
-            console.log("error : ", error);
-        }finally {
+        } catch (err) {
+            console.error('getMyInfo error:', err);
+            Toast.show({
+                ...toastOptions,
+                type: 'error',
+                text1: '내 정보 조회에 실패했습니다.',
+            });
+        } finally {
             setLoading(false);
         }
-    }
+    };
 
-    // 프로필 수정 페이지 이동
+    // 화면 포커스 시마다 정보 갱신
+    useFocusEffect(
+        useCallback(() => {
+            getMyInfo();
+        }, [])
+    );
+
+    // 프로필 수정 화면 이동
     const editProfile = () => {
-        if(token) {
-            navigation.navigate("EditProfile");
-        }else {
+        if (token) {
+            navigation.navigate('EditProfile');
+        } else {
             Toast.show({
                 ...toastOptions,
                 type: 'error',
                 text1: '유저 토큰이 누락되었습니다. 다시 시도 해주세요.',
             });
-            setReSetting(prev => !prev);
         }
-    }
-    
+    };
+
     return (
         <SafeTopWrapper>
             <ScrollView style={styles.container}>
                 <View style={styles.headerWrapper}>
                     <Text style={styles.headerTitle}>나의 가치</Text>
                 </View>
-                {/* 프로필 카드 영역 */}
+
+                {/* 프로필 카드 */}
                 <View style={styles.profileCard}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        {myInfo?.thumbnailImg ? (
-                            <Image source={{ uri: myInfo?.thumbnailImg }} style={styles.profileImage}/>
-                        ) : (
-                            <UserNoImgIcon width={60} height={60} style={{ transform: [{ scale: 1 }] }} />
-                        )}
-                        {/* <Image source={{ uri: myInfo?.thumbnailImg }} style={styles.profileImage} /> */}
+                    <View style={styles.profileRow}>
+                        <View style={styles.avatarWrapper}>
+                            {myInfo?.thumbnailImg ? (
+                                <Image
+                                    source={{ uri: myInfo.thumbnailImg }}
+                                    style={styles.avatar}
+                                    resizeMode="cover"
+                                />
+                            ) : (
+                                <UserNoImgIcon width={60} height={60} />
+                            )}
+                        </View>
                         <View style={styles.profileTextContainer}>
                             <Text style={styles.nickname}>{myInfo?.nickname}</Text>
-                            <TouchableOpacity onPress={editProfile} style={styles.editProfileBtn}>
+                            <TouchableOpacity
+                                onPress={editProfile}
+                                style={styles.editProfileBtn}
+                            >
                                 <Text style={styles.editProfileText}>프로필 수정</Text>
                             </TouchableOpacity>
                         </View>
                     </View>
-                    
-                    {/* 오른쪽 상단: 설정 아이콘 */}
-                    <TouchableOpacity onPress={() => navigation.navigate('Setting', { phone: myInfo.phone })} style={styles.settingIconWrapper}>
-                        <SettingIcon width={20} height={20}/>
+                    <TouchableOpacity
+                        onPress={() => navigation.navigate('Setting', { phone: myInfo?.phone })}
+                        style={styles.settingIconWrapper}
+                    >
+                        <SettingIcon width={20} height={20} />
                     </TouchableOpacity>
                 </View>
 
                 {/* 경매 섹션 */}
                 <View style={styles.sectionCard}>
                     <Text style={styles.sectionTitle}>나의 경매</Text>
-                    <MenuItem label="판매내역" icon="tag-outline" onPress={() => {navigation.navigate('MySalesHistory')}} />
+                    <MenuItem
+                        label="판매내역"
+                        icon="tag-outline"
+                        onPress={() => navigation.navigate('MySalesHistory')}
+                    />
                     <MenuItem label="구매내역" icon="cart-outline" onPress={() => {}} />
                     <MenuItem label="찜한상품" icon="heart-outline" onPress={() => {}} />
                 </View>
@@ -112,7 +147,7 @@ const MyPage = () => {
                     <MenuItem label="내가 쓴 댓글" icon="comment-text-outline" onPress={() => {}} />
                 </View>
 
-                {/* 기타 섹션 */}
+                {/* 고객 편의 섹션 */}
                 <View style={styles.sectionCard}>
                     <Text style={styles.sectionTitle}>고객 편의</Text>
                     <MenuItem label="설정" icon="cog-outline" onPress={() => {}} />
@@ -155,12 +190,9 @@ const styles = StyleSheet.create({
         color: '#000',
     },
     profileCard: {
-        flexDirection: 'row',
-        justifyContent: 'space-between', // 👈 추가
-        alignItems: 'center',
         backgroundColor: '#f9f9f9',
+        margin: 16,
         padding: 16,
-        margin: 20,
         borderRadius: 12,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 1 },
@@ -168,18 +200,27 @@ const styles = StyleSheet.create({
         shadowRadius: 4,
         elevation: 2,
     },
-    profileImage: {
+    profileRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+    avatarWrapper: {
         width: 60,
         height: 60,
         borderRadius: 30,
         backgroundColor: '#ddd',
+        overflow: 'hidden',
         alignItems: 'center',
-        justifyContent: 'center', // 👈 SVG가 가운데 정렬되도록
-        overflow: 'hidden',       // 혹시 튀어나올 경우 잘라냄
+        justifyContent: 'center',
+    },
+    avatar: {
+        width: '100%',
+        height: '100%',
     },
     profileTextContainer: {
-        marginLeft: 16,
         flex: 1,
+        marginLeft: 16,
     },
     nickname: {
         fontSize: 18,
@@ -187,39 +228,27 @@ const styles = StyleSheet.create({
         color: '#333',
     },
     editProfileBtn: {
-        marginTop: 6,
+        marginTop: 8,
+        paddingVertical: 6,
         paddingHorizontal: 12,
-        paddingVertical: 4,
         borderRadius: 6,
         backgroundColor: '#6495ED',
         alignSelf: 'flex-start',
     },
     editProfileText: {
-        color: 'white',
+        color: '#fff',
         fontSize: 12,
     },
     settingIconWrapper: {
         position: 'absolute',
         top: 16,
         right: 16,
-        padding: 4,
-    },
-    section: {
-        marginTop: 24,
-        paddingHorizontal: 20,
-    },
-    sectionTitle: {
-        fontSize: 14,
-        fontWeight: 'bold',
-        color: '#666',
-        marginBottom: 8,
     },
     sectionCard: {
         backgroundColor: '#f9f9f9',
-        marginHorizontal: 20,
+        marginHorizontal: 16,
         marginTop: 16,
-        paddingHorizontal: 16,
-        paddingVertical: 12,
+        padding: 12,
         borderRadius: 12,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 1 },
@@ -227,12 +256,14 @@ const styles = StyleSheet.create({
         shadowRadius: 2,
         elevation: 1,
     },
-    menuItem: {
-        paddingVertical: 16,
-    },
-    menuText: {
+    sectionTitle: {
         fontSize: 14,
-        color: '#333',
+        fontWeight: 'bold',
+        color: '#666',
+        marginBottom: 8,
+    },
+    menuItem: {
+        paddingVertical: 12,
     },
     menuItemContent: {
         flexDirection: 'row',
@@ -240,6 +271,21 @@ const styles = StyleSheet.create({
     },
     menuIcon: {
         marginRight: 12,
+    },
+    menuText: {
+        fontSize: 14,
+        color: '#333',
+    },
+    spinnerWrapper: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(255,255,255,0.5)',
+        zIndex: 999,
     },
 });
 
