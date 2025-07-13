@@ -1,53 +1,61 @@
-import React, { useState, useContext, useEffect } from 'react';
+import React, { useEffect, useState, useContext } from 'react';
 import {
-    View, TextInput, StyleSheet, ScrollView, Alert, TouchableOpacity,
-    Image, SafeAreaView, StatusBar, Platform, Text, ActivityIndicator, PermissionsAndroid
+    View,
+    TextInput,
+    StyleSheet,
+    ScrollView,
+    TouchableOpacity,
+    Image,
+    StatusBar,
+    Platform,
+    Text,
+    PermissionsAndroid,
+    ActivityIndicator,
+    KeyboardAvoidingView
 } from 'react-native';
 import mime from 'react-native-mime-types';
 import axios from 'axios';
 import Config from 'react-native-config';
 import * as ImagePicker from 'react-native-image-picker';
-import AppText from '../../components/AppText';
 import AddButton from '../../components/AddButton';
-import RequiredLabel from '../../components/RequireLabel';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import RNFS from 'react-native-fs';
 import Toast from 'react-native-toast-message';
 import { AuthContext } from '../../contexts/AuthContext';
+import { ItemUploadContext } from '../../contexts/ItemUploadProvider';
+import ImageResizer from 'react-native-image-resizer';
 import SafeTopWrapper from '../../components/SafeTopWrapper';
-import DateTimeModal from '../../components/DateTimeModal';
-import { RotationGestureHandler } from 'react-native-gesture-handler';
 
-const START_OPTIONS = ['등록즉시', '1일뒤', '직접입력'];
-const END_OPTIONS = ['수동마감', '3일뒤', '1주일뒤', '직접입력'];
+import AngleHeader from '../../components/AngleHeader';
+import CloseIcon from '../../assets/images/common/close.svg';
 
-const ItemEditPage = ({ navigation, route }) => {
+const STATUS_BAR_HEIGHT = Platform.OS === 'android'
+    ? StatusBar.currentHeight
+    : 20;
+const HOME_INDICATOR_HEIGHT = Platform.OS === 'ios' ? 34 : 0;
+const HEADER_HEIGHT = 48;
+const FOOTER_HEIGHT = 56;
+const MAX_IMAGE_SIZE_MB = 2;
+
+export default function ItemEditPage({ navigation, route }) {
     const apiUrl = Config.API_URL;
     const { token } = useContext(AuthContext);
-    const { itemId } = route.params;
+    const {
+        title, setTitle,
+        description, setDescription,
+        startPrice, setStartPrice,
+        images, setImages,
+        mainCategoryId, setMainCategoryId,
+        subCategoryId, setSubCategoryId,
+        selectedCategory, setSelectedCategory,
+        auctionOption, setAuctionOption,
+        resetForm
+    } = useContext(ItemUploadContext);
 
-    const [title, setTitle] = useState('');
-    const [description, setDescription] = useState('');
-    const [startPrice, setStartPrice] = useState('');
-    const [bidIncrement, setBidIncrement] = useState('');
-    const [buyNowPrice, setBuyNowPrice] = useState('');
-    const [images, setImages] = useState([]);
     const [loading, setLoading] = useState(false);
-
-    // 경매 시작시간, 마감시간 관련
-    const [startOption, setStartOption] = useState('등록즉시');
-    const [startDate, setStartDate] = useState(new Date());
-    const [showStartPicker, setShowStartPicker] = useState(false);
-    const [startDateString, setStartDateString] = useState("");
-
-    const [endOption, setEndOption] = useState('수동마감');
-    const [endDate, setEndDate] = useState(() => new Date('9999-12-31T23:59:59'));
-    const [showEndPicker, setShowEndPicker] = useState(false);
-    const [endDateString, setEndDateString] = useState("");
-
-    const [pickerType, setPickerType] = useState("");
-
-    // 기존에 등록된 이미지들 x누르면 배열에서 삭제해줌
-    const [existingImages, setExistingImages] = useState([]);
+    const [itemState, setItemState] = useState(null);
+    const [bidCount, setBidCount] = useState(0);
+    const { itemId } = route.params;
 
     const toastOptions = {
         position: 'bottom',
@@ -56,57 +64,57 @@ const ItemEditPage = ({ navigation, route }) => {
     };
 
     useEffect(() => {
-        fetchItemInfo();
-    }, []);
-
-    const fetchItemInfo = async () => {
-        setLoading(true);
-
-        try {
-            const res = await axios.get(`${apiUrl}/api/item/edit-info/${itemId}`, {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    "Content-Type": "application/json"
-                }
-            });
-            if (res.data.result === 'success') {
-                const item = res.data.item;
-                setStartDate(new Date(item.startTime));
-                setEndDate(new Date(item.endTime));
-                setTitle(item.title);
-                setDescription(item.description);
-                setStartPrice(item.startPrice.toString());
-                setBidIncrement(item.bidUnit?.toString() || '');
-                setBuyNowPrice(item.buyNowPrice?.toString() || '');
-                setImages(item.images.map(img => ({
-                    uri: img.url,
-                    fileName: img.url.split('/').pop(),
-                    type: 'image/jpeg'
-                })));
-
-                setExistingImages(item.images.map(img => img.url));
-                
-                
-                const compareTime = new Date();
-                if (startDate > compareTime) {
-                    setStartDateString(formatDate(startDate));
+        const fetchItem = async () => {
+            setLoading(true);
+            try {
+                const res = await axios.get(
+                    `${apiUrl}/api/item/edit-info/${itemId}`,
+                    { headers: { Authorization: `Bearer ${token}` } }
+                );
+                if (res.data.result === 'success') {
+                    const item = res.data.item;
+                    console.log(item);
+                    // 기본 필드
+                    setTitle(item.title);
+                    setDescription(item.description);
+                    setStartPrice(item.startPrice.toString());
+                    // 카테고리
+                    setMainCategoryId(item.mainCategoryId);
+                    setSubCategoryId(item.subCategoryId);
+                    setSelectedCategory(`${item.mainCategoryName} > ${item.subCategoryName}`);
+                    // 옵션
+                    setAuctionOption({
+                        productState: item.productState,
+                        endOption: item.endOption,
+                        bidUnit: item.bidUnit?.toString() || '',
+                        buyNowPrice: item.buyNowPrice?.toString() || '',
+                        endDate: item.endTime
+                    });
+                    // 상태, 입찰자 수
+                    setItemState(item.state);
+                    setBidCount(item.currentPrice === 0 ? 0 : 1);
+                    // 이미지
+                    const imgs = item.images.map((imgObj, idx) => {
+                        const url = imgObj.url;  // 객체에서 실제 URL 문자열 꺼내기
+                        return {
+                            uri: url,
+                            fileName: url.split('/').pop(),
+                            type: 'image/jpeg',
+                        };
+                    });
+                    setImages(imgs);
                 } else {
-                    setStartDateString("");
+                    Toast.show({ ...toastOptions, type: 'error', text1: '아이템 정보 불러오기 실패' });
                 }
-
-                if (!(endDate.getFullYear() === 9999 && endDate.getMonth() === 11 && endDate.getDate() === 31)) {
-                    setEndDateString(formatDate(endDate));
-                } else {
-                    setEndDateString("");
-                }
+            } catch (err) {
+                console.error(err);
+                Toast.show({ ...toastOptions, type: 'error', text1: '아이템 불러오기 중 오류' });
+            } finally {
+                setLoading(false);
             }
-        } catch (e) {
-            console.error(e);
-            Toast.show({ ...toastOptions, type: 'error', text1: '물품 정보를 불러오지 못했습니다.' });
-        } finally {
-            setLoading(false);
-        }
-    };
+        };
+        fetchItem();
+    }, [itemId]);
 
     const requestImagePermission = async () => {
         if (Platform.OS === 'android' && Platform.Version >= 33) {
@@ -126,423 +134,373 @@ const ItemEditPage = ({ navigation, route }) => {
     };
 
     const pickImage = async () => {
+        setLoading(true);
         const hasPermission = await requestImagePermission();
         if (!hasPermission) {
-            Alert.alert('권한 거부됨', '이미지를 선택하려면 권한이 필요합니다.');
+            setLoading(false);
+            Toast.show({
+                ...toastOptions,
+                type: 'error',
+                text1: '권한 거부됨 : 이미지를 선택하려면 권한이 필요합니다.',
+            });
             return;
         }
 
         const options = {
             mediaType: 'photo',
-            includeBase64: false,
+            includeBase64: true,
+            quality: 0.8,
             selectionLimit: 0,
         };
 
         ImagePicker.launchImageLibrary(options, async (response) => {
-            if (response.didCancel || response.errorCode || !response.assets?.length) return;
+            if (response.didCancel || response.errorCode || !response.assets?.length) {
+                setLoading(false);
+                return;
+            }
 
             const selected = response.assets;
             const totalCount = images.length + selected.length;
 
             if (totalCount > 10) {
-                Alert.alert('사진은 최대 10장까지만 추가할 수 있습니다.');
+                setLoading(false);
+                Toast.show({
+                    ...toastOptions,
+                    type: 'error',
+                    text1: '사진은 최대 10장까지만 추가할 수 있습니다.',
+                });
                 return;
             }
 
-            const newImages = selected.map((img) => ({
-                uri: img.uri,
-                fileName: img.fileName || `image_${Date.now()}.jpg`,
-                type: img.type || mime.lookup(img.uri) || 'image/jpeg',
-            }));
-
-            setImages(prev => [...prev, ...newImages]);
+            const resizedImages = [];
+            for (const img of selected) {
+                try {
+                    const resized = await ImageResizer.createResizedImage(
+                        img.uri,
+                        800,
+                        800,
+                        'JPEG',
+                        70
+                    );
+                    const path = resized.uri.replace('file://', '');
+                    const stat = await RNFS.stat(path);
+                    const sizeMB = stat.size / (1024 * 1024);
+                    if (sizeMB > MAX_IMAGE_SIZE_MB) {
+                        Toast.show({
+                            ...toastOptions,
+                            type: 'error',
+                            text1: `압축 후에도 용량 초과: ${img.fileName || '이미지'} 제외됩니다.`,
+                        });
+                        continue;
+                    }
+                    resizedImages.push({
+                        uri: resized.uri,
+                        fileName: img.fileName || `resized_${Date.now()}.jpg`,
+                        type: 'image/jpeg',
+                    });
+                } catch (err) {
+                    console.warn('리사이즈 실패:', err);
+                }
+            }
+            setImages(prev => [...prev, ...resizedImages]);
+            setLoading(false);
         });
     };
 
     const removeImage = (index) => {
-        // 이미존재하는 이미지배열에서 삭제해주기
-        const removedImage = images[index];
-        
+        setLoading(true);
         setImages(prev => prev.filter((_, i) => i !== index));
-
-        if(existingImages.includes(removedImage.uri)) {
-            setExistingImages(prev => prev.filter(url => url !== removedImage.uri));
-        }
+        setLoading(false);
     };
 
     const formatCurrencyInput = (text) => {
-        var numeric = text.replace(/[^0-9]/g, '');
-        if(numeric.startsWith('0') && numeric.length > 1) {
+        let numeric = text.replace(/[^0-9]/g, '');
+        if (numeric.startsWith('0') && numeric.length > 1) {
             numeric = numeric.replace(/^0+/, '');
         }
         return numeric;
     };
 
-    const handleSubmitEdit = async () => {
-        // setLoading(true);
-        const isValid = Boolean(title.trim() && description.trim() && startPrice.trim());
+    const goCategoryPicker = () => {
+        navigation.navigate('CategoryPicker');
+    };
 
+    const goOptionPage = () => {
+        if(itemState === 0 || (itemState === 1 && bidCount === 0)) {
+            navigation.navigate('ItemOption');
+        }else {
+            navigation.navigate('ItemOption', { readOnly: true });
+        }
+    };
+
+
+    const getAuctionOptionText = () => {
+        if (!auctionOption) return '';
+        const { productState, endOption, bidUnit, buyNowPrice } = auctionOption;
+        let parts = [];
+        if (productState) parts.push(productState);
+        if (endOption) parts.push(endOption);
+        if (bidUnit) parts.push(bidUnit);
+        if (buyNowPrice) parts.push(buyNowPrice);
+
+        return parts.join(' / ').length === 4 ? parts.join(' / ') : '';
+    };
+
+    const itemUpdate = async () => {
+        // setLoading(true);
+        const isValid = Boolean(
+            title.trim() &&
+            description.trim() &&
+            startPrice.trim() &&
+            images.length > 0
+        );
         if (!isValid) {
-            Alert.alert("필수 항목을 입력해주세요.");
+            Toast.show({ ...toastOptions, type: 'error', text1: '필수 항목을 모두 입력해 주세요.' });
             setLoading(false);
             return;
         }
 
         const formData = new FormData();
-        formData.append('itemId', itemId);
         formData.append('title', title);
         formData.append('description', description);
-        formData.append('startTime', startDate.toISOString());
-        formData.append('endTime', endDate.toISOString());
+        formData.append('productState', auctionOption.productState);
         formData.append('startPrice', Number(startPrice.replace(/,/g, '')));
-        formData.append('bidUnit', Number(bidIncrement.replace(/,/g, '')));
-        formData.append('buyNowPrice', Number(buyNowPrice.replace(/,/g, '')));
-        formData.append('isBidUnit', bidIncrement === '' || bidIncrement === '0' ? 0 : 1);
-
-        (existingImages || []).forEach(url => {
-            if (typeof url === 'string' && url.trim().startsWith('http')) {
-                formData.append('existingImageUrls', url);
-            } else {
-                console.warn('[formData] 잘못된 existingImage url 제거됨:', url);
-            }
-        });
+        formData.append('endOption', auctionOption.endOption);
+        formData.append('endTime', auctionOption.endDate);
+        formData.append('bidUnit', Number(auctionOption.bidUnit.replace(/,/g, '') || 0));
+        formData.append('buyNowPrice', Number(auctionOption.buyNowPrice.replace(/,/g, '') || 0));
+        formData.append('isBidUnit', auctionOption.bidUnit ? 1 : 0);
+        formData.append('status', 1);
+        formData.append('categoryId', subCategoryId);
 
         images.forEach((img, i) => {
             formData.append('images', {
-                uri: Platform.OS === 'ios' ? img.uri.replace('file://', '') : img.uri,
-                name: img.fileName || `image_${i}.jpg`,
-                type: img.type || mime.lookup(img.uri) || 'image/jpeg',
+                uri: img.uri.startsWith('http')
+                    ? img.uri
+                    : (Platform.OS === 'ios' ? img.uri.replace('file://', '') : img.uri),
+                name: img.fileName,
+                type: img.type,
             });
             formData.append('isThumbnail', i === 0 ? '1' : '0');
         });
 
         try {
-            const res = await axios.patch(`${apiUrl}/api/item/edit/${itemId}`, formData, 
+            const res = await axios.patch(
+                `${apiUrl}/api/item/edit/${itemId}`,
+                formData,
                 {
                     headers: {
+                        Authorization: `Bearer ${token}`,
                         'Content-Type': 'multipart/form-data',
-                        Authorization: `Bearer ${token}`
                     }
                 }
             );
-
             if (res.data.result === 'success') {
-                Toast.show({ ...toastOptions, type: 'success', text1: '수정 완료되었습니다.' });
+                Toast.show({ ...toastOptions, type: 'success', text1: '수정이 완료되었습니다.' });
+                resetForm();
                 navigation.goBack();
             } else {
-                Toast.show({ ...toastOptions, type: 'error', text1: '수정에 실패했습니다.' });
+                throw new Error();
             }
         } catch (err) {
-            Alert.alert(JSON.stringify(err));
             console.error(err);
-            Toast.show({ ...toastOptions, type: 'error', text1: '수정 중 오류가 발생했습니다.' });
+            Toast.show({ ...toastOptions, type: 'error', text1: '수정에 실패했습니다.' });
         } finally {
             setLoading(false);
         }
     };
 
-    const formatDate = (date) => {
-        const pad = (n) => String(n).padStart(2, '0');
-        return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ` +
-               `${pad(date.getHours())}:${pad(date.getMinutes())}`;
-    };
-
-    // 경매 시작시간 선택할 때
-    const onPressStartOption = (opt) => {
-        setStartOption(opt);
-        setStartDateString("");
-        if(opt === '직접입력') {
-            // 모달창 띄워주기
-            setPickerType("경매 시작시간");
-            setShowStartPicker(true);
-        }else {
-            setShowStartPicker(false);
-            setPickerType("");
-            // 등록즉시 / 24시간후 로직 예시
-            setStartDate(
-                opt === '등록즉시' ? new Date() : new Date(Date.now() + 24 * 60 * 60 * 1000)
-            );
-        }
-    };
-
-    // 경매 마감시간 선택할 때
-    const onPressEndOption = (opt) => {
-        setEndOption(opt);
-        setEndDateString("");
-        if(opt === '직접입력') {
-            // 모달창 띄워주기기
-            setShowEndPicker(true);
-            setPickerType("경매 마감시간");
-        }else {
-            setShowEndPicker(false);
-            setPickerType("");
-            if(opt === '3일후') {
-                setEndDate(new Date(Date.now() + 3 * 24 * 60 * 60 * 1000));
-            }else if (opt === '1주일후') {
-                setEndDate(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
-            }else if (opt === '1개월후') {
-                const tmp = new Date();
-                tmp.setMonth(tmp.getMonth() + 1);
-                setEndDate(tmp);
-            }else {
-                // '수동마감'
-                setEndDate(new Date('9999-12-31T23:59:59'));
-            }
-        }
-    };
-
     return (
-        <SafeTopWrapper style={styles.container}>
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()}>
-                    <Ionicons name="close" size={24} color="#000" />
-                </TouchableOpacity>
-                <AppText style={styles.headerTitle}>내 경매 상품 수정</AppText>
-                <TouchableOpacity>
-                    {/* <AppText style={styles.headerBtn}>임시저장</AppText> */}
-                </TouchableOpacity>
-            </View>
-            <ScrollView style={styles.scrollArea} contentContainerStyle={{ padding: 16, paddingBottom: 120 }}>
-                {/* 사진 추가 */}
-                <AppText style={styles.label}>
-                    <RequiredLabel>사진 추가</RequiredLabel>
-                </AppText>
-                <View style={styles.imageContainer}>
-                    {images.length < 10 && (
-                        <TouchableOpacity style={styles.addButton} onPress={pickImage}>
-                            <Text style={styles.addButtonText}>+</Text>
-                        </TouchableOpacity>
-                    )}
+        <SafeTopWrapper style={{ flex: 1 }}>
+            <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 120 : 0}
+                style={{ flex: 1 }}
+            >
+                {/* <View style={styles.header}>
+                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.closeButton}>
+                        <Ionicons name="close" size={24} color="#000" />
+                    </TouchableOpacity>
+                    <Text style={styles.headerTitle}>내 물건 수정</Text>
+                </View> */}
 
-                    {images.map((img, i) => (
-                        <View key={i} style={styles.imageWrapper}>
-                            <Image source={{ uri: img.uri }} style={styles.preview} />
-                            {i === 0 && (
-                                <View style={styles.labelTag}>
-                                    <Text style={styles.labelText}>대표 사진</Text>
-                                </View>
-                            )}
-                            <TouchableOpacity
-                                style={styles.deleteButton}
-                                onPress={() => removeImage(i)}>
-                                <Text style={styles.deleteButtonText}>×</Text>
-                            </TouchableOpacity>
-                        </View>
-                    ))}
-                </View>
-
-                {/* 경매 시작 시간 */}
-                <AppText style={styles.label}>경매 시작 시간</AppText>
-                <View style={styles.optionRow}>
-                    {START_OPTIONS.map(opt => (
-                        <TouchableOpacity
-                            key={opt}
-                            onPress={() => onPressStartOption(opt)}
-                            style={[styles.optionBtn, startOption === opt && styles.optionBtnActive]}
-                        >
-                        <Text style={ startOption === opt ? styles.optionTextActive : styles.optionText }>
-                            {opt}
-                        </Text>
-                        </TouchableOpacity>
-                    ))}
-                </View>
-                
-                {/* 선택한 경매 시간 보여주기 */}
-                {startDateString !== "" && (
-                    <AppText>
-                        선택한 시작 시간 : {startDateString}
-                    </AppText>
-                )}
-
-                {/* 경매 마감 시간 */}
-                <AppText style={styles.label}>경매 마감 시간</AppText>
-                    <View style={styles.optionRow}>
-                    {END_OPTIONS.map(opt => (
-                        <TouchableOpacity
-                        key={opt}
-                        onPress={() => onPressEndOption(opt)}
-                        style={[styles.optionBtn, endOption === opt && styles.optionBtnActive]}
-                        >
-                        <Text style={ endOption === opt ? styles.optionTextActive : styles.optionText }>
-                            {opt}
-                        </Text>
-                        </TouchableOpacity>
-                    ))}
-                </View>
-
-                {/* 선택한 경매 시간 보여주기 */}
-                {endDateString !== "" && (
-                    <AppText>
-                        선택한 마감 시간 : {endDateString}
-                    </AppText>
-                )}
-
-                <DateTimeModal
-                    title={pickerType}
-                    visible={showStartPicker || showEndPicker}
-                    initialDate={startDate}
-                    onCancel={() => {
-                        if(showStartPicker) {
-                            setStartOption('등록즉시');
-                            setShowStartPicker(false);
-                        }else if(showEndPicker) {
-                            setStartOption('수동마감');
-                            setShowEndPicker(false);
-                        }
-                    }}
-                    onConfirm={date => {
-                        if(showStartPicker) {
-                            const now = new Date();
-                            const valid = date < now ? now : date;
-                            setStartDate(valid);
-                            setShowStartPicker(false);
-                            var showStartDate = formatDate(valid);   // 보여줄 날짜
-                            setStartDateString(showStartDate);
-                            
-                        }else if(showEndPicker) {
-                            // 마감시간은 시작시간보다 크고 최소 한시간 뒤로 가야됨
-                            // 마감시간은 최소 한시간 뒤로 설정
-                            const minEnd = new Date(startDate.getTime() + 60 * 60 * 1000);
-                            if (date < minEnd) {
-                                Alert.alert('경고', '마감시간은 시작시간보다 최소 1시간 이후여야 합니다.', [
-                                    { text: '확인', onPress: () => {} },
-                                ]);
-                                date = minEnd;
-                            }
-                            setEndDate(date);
-                            setShowEndPicker(false);
-                            var showEndDate = formatDate(date);
-                            setEndDateString(showEndDate);
-                        }
-                    }}
+                <AngleHeader
+                    title="내 물건 수정"
+                    IconComponent={() => <CloseIcon width={16} height={16} />}
+                    // onPress={handleTemporarySave}
                 />
 
-                <AppText style={styles.label}><RequiredLabel />제목</AppText>
-                <TextInput style={styles.input} value={title} onChangeText={setTitle} />
+                <ScrollView style={styles.scrollArea} contentContainerStyle={styles.contentContainer}>
+                    <View style={styles.topNoticeBox}>
+                        <Ionicons name="information-circle-outline" size={18} color="#6495ED" style={{ marginRight: 6 }} />
+                        <Text style={styles.topNoticeText}>
+                            판매금지 물품, 광고, 반복된 게시글은 경고 없이 삭제될 수 있습니다.
+                        </Text>
+                    </View>
 
-                <AppText style={styles.label}><RequiredLabel />설명</AppText>
-                <TextInput style={[styles.input, styles.textArea]} multiline value={description} onChangeText={setDescription} />
+                    <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={styles.imageContainer}
+                    >
+                        {images.length < 10 && (
+                            <TouchableOpacity style={styles.addButton} onPress={pickImage}>
+                                <Ionicons name="camera-outline" size={28} color="#6495ED" />
+                                <Text style={styles.imageCountText}>{images.length}/10</Text>
+                            </TouchableOpacity>
+                        )}
+                        {images.map((img, i) => (
+                            <View key={i} style={styles.imageWrapper}>
+                                <Image source={{ uri: img.uri }} style={styles.preview} />
+                                {i === 0 && (
+                                    <View style={styles.labelTag}>
+                                        <Text style={styles.labelText}>대표 사진</Text>
+                                    </View>
+                                )}
+                                <TouchableOpacity
+                                    style={styles.deleteButton}
+                                    onPress={() => removeImage(i)}
+                                >
+                                    <Text style={styles.deleteButtonText}>×</Text>
+                                </TouchableOpacity>
+                            </View>
+                        ))}
+                    </ScrollView>
 
-                <AppText style={styles.label}><RequiredLabel />시작가</AppText>
-                <TextInput style={styles.input} keyboardType='number-pad' value={startPrice.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} onChangeText={text => setStartPrice(formatCurrencyInput(text))} />
+                    <View style={styles.inputRow}>
+                        <View style={styles.labelBox}><Text style={styles.rowLabel}>상품명</Text></View>
+                        <TextInput
+                            style={styles.rowInput}
+                            value={title}
+                            onChangeText={setTitle}
+                            placeholder="상품명을 입력해 주세요."
+                        />
+                    </View>
 
-                <AppText style={styles.label}>입찰 단위</AppText>
-                <TextInput style={styles.input} keyboardType='number-pad' value={bidIncrement.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} onChangeText={text => setBidIncrement(formatCurrencyInput(text))} />
+                    <View style={styles.inputRow}>
+                        <View style={styles.labelBox}><Text style={styles.rowLabel}>카테고리</Text></View>
+                        <TouchableOpacity style={{ flex: 1 }} onPress={goCategoryPicker}>
+                            <TextInput
+                                style={styles.rowInput}
+                                value={mainCategoryId != null ? selectedCategory : ''}
+                                placeholder="카테고리를 선택해 주세요."
+                                editable={false}
+                                pointerEvents="none"
+                            />
+                        </TouchableOpacity>
+                    </View>
 
-                <AppText style={styles.label}>즉시 구매가</AppText>
-                <TextInput style={styles.input} keyboardType='number-pad' value={buyNowPrice.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} onChangeText={text => setBuyNowPrice(formatCurrencyInput(text))} />
-            </ScrollView>
+                    <View style={styles.inputRow}>
+                        <View style={styles.labelBox}><Text style={styles.rowLabel}>시작가</Text></View>
+                        <TextInput
+                            style={styles.rowInput}
+                            value={
+                                Number(startPrice) > 0
+                                ? startPrice.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+                                : ''
+                            }
+                            onChangeText={text => setStartPrice(formatCurrencyInput(text))}
+                            keyboardType="number-pad"
+                            placeholder="시작가를 입력해주세요."
+                        />
+                    </View>
 
-            <View style={styles.footer}>
-                <AddButton title="수정 완료" onPress={handleSubmitEdit} />
-            </View>
+                    <View style={styles.inputRow}>
+                        <View style={styles.labelBox}><Text style={styles.rowLabel}>경매옵션</Text></View>
+                        <TouchableOpacity style={{ flex: 1 }} onPress={goOptionPage}>
+                            <TextInput
+                                style={styles.rowInput}
+                                value={getAuctionOptionText()}
+                                placeholder="경매 옵션을 선택해 주세요."
+                                editable={false}
+                                pointerEvents="none"
+                            />
+                        </TouchableOpacity>
+                    </View>
 
-            {loading && (
-                <View style={styles.spinnerWrapper}>
-                    <ActivityIndicator size="large" color="#6495ED" />
+                    <View style={styles.descriptionWrapper}>
+                        {(!description) && (
+                            <Text style={styles.placeholderText}>
+                                - 경매할 물건의 설명을 입력해 주세요.{"\n"}- 제품명, 물건의 상태, 사용 기간 등
+                            </Text>
+                        )}
+                        <TextInput
+                            style={styles.descriptionInput}
+                            value={description}
+                            onChangeText={setDescription}
+                            multiline
+                        />
+                    </View>
+                </ScrollView>
+
+                <View style={styles.footer}>
+                    <AddButton title="수정하기" onPress={itemUpdate} style={styles.footerButton} />
                 </View>
-            )}
+
+                {loading && (
+                    <View style={styles.spinnerWrapper}>
+                        <ActivityIndicator size="large" color="#6495ED" />
+                    </View>
+                )}
+            </KeyboardAvoidingView>
         </SafeTopWrapper>
     );
-};
-
-const STATUS_BAR_HEIGHT = Platform.OS === 'android'
-    ? StatusBar.currentHeight
-    : 20;
-const HOME_INDICATOR_HEIGHT = Platform.OS === 'ios' ? 34 : 0;
-const HEADER_HEIGHT = 48;
-const FOOTER_HEIGHT = 56;
+}
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#fff' },
-    header: {
-        position: 'absolute', top: 0, left: 0, right: 0,
-        height: HEADER_HEIGHT,
-        flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-        paddingHorizontal: 16,
-        backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#ccc',
-        zIndex: 10, elevation: 10,
-    },
-    headerTitle: { fontSize: 18, fontWeight: '600', right: 10 },
-    headerBtn: { fontSize: 16, color: '#000' },
-    headerBtnDisabled: { color: '#aaa' },
     scrollArea: {
         flex: 1,
         backgroundColor: '#fff',
-        marginTop: STATUS_BAR_HEIGHT
     },
-    label: { marginTop: 20, fontSize: 14, fontWeight: '500', marginBottom: 12 },
-    input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 4, padding: 8, marginTop: 4 },
-    textArea: { height: 100, textAlignVertical: 'top' },
-    footer: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        backgroundColor: '#fff',
+    contentContainer: {
         padding: 16,
-        borderTopWidth: 1,
-        borderTopColor: '#ddd',
     },
-    imageContainer: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        marginTop: 12,
-        paddingRight: 2,
+    topNoticeBox: {
+        flexDirection: 'row', alignItems: 'flex-start',
+        backgroundColor: '#f0f4ff', borderColor: '#c6d4f5', borderWidth: 1,
+        borderRadius: 8,
+        padding: 10,
     },
-    imageWrapper: {
-        position: 'relative',
-        marginRight: 10,
+    topNoticeText: { fontSize: 12, color: '#333', lineHeight: 18, flex: 1 },
+    imageContainer: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, marginBottom: 5, marginTop: 5 },
+    addButton: {
+        width: 70, height: 70, borderWidth: 1, borderColor: '#6495ED',
+        justifyContent: 'center', alignItems: 'center', borderRadius: 6,
+        marginRight: 10, backgroundColor: '#fff',
     },
-    preview: { width: 60, height: 60, borderRadius: 8, borderWidth: 1, borderColor: '#ccc' },
+    imageCountText: { fontSize: 12, color: '#ccc', fontWeight: 'bold' },
+    imageWrapper: { position: 'relative', marginRight: 10 },
+    preview: { width: 70, height: 70, borderRadius: 6, borderWidth: 1, borderColor: '#ccc' },
+    labelTag: {
+        position: 'absolute', bottom: 0, backgroundColor: '#6495ED',
+        paddingHorizontal: 5, paddingVertical: 2, borderRadius: 4, width: '100%'
+    },
+    labelText: { color: '#fff', fontSize: 10, fontWeight: 'bold', textAlign: 'center' },
     deleteButton: {
-        position: 'absolute', top: -6, right: -6,
-        backgroundColor: '#6495ED', borderRadius: 12,
-        width: 18, height: 18, justifyContent: 'center', alignItems: 'center'
+        position: 'absolute', top: -4, right: -4,
+        backgroundColor: '#6495ED', borderRadius: 10, width: 18, height: 18, alignItems: 'center'
     },
-    deleteButtonText: { color: '#fff', fontSize: 10, fontWeight: 'bold' },
+    deleteButtonText: { color: '#fff', fontSize: 14, fontWeight: 'bold', bottom: 2 },
+    inputRow: { flexDirection: 'column', borderBottomWidth: 1, borderColor: '#eee', paddingVertical: 8 },
+    labelBox: { width: '100%', justifyContent: 'center', alignItems: 'flex-start' },
+    rowLabel: { fontSize: 13, color: '#333333' },
+    rowInput: { flex: 1, fontSize: 12, color: '#000', paddingVertical: 5 },
+    descriptionWrapper: {
+        marginTop: 16, backgroundColor: '#f9f9f9',
+        borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#eee', padding: 12,
+    },
+    placeholderText: {
+        position: 'absolute', top: 12, left: 12, right: 12,
+        color: '#999', fontSize: 12, lineHeight: 25,
+    },
+    descriptionInput: { fontSize: 12, color: '#000', height: 180, textAlignVertical: 'top' },
+    footer: {
+        padding: 16, borderTopWidth: 1, borderTopColor: '#ccc', backgroundColor: '#fff'
+    },
+    footerButton: { width: '100%' },
     spinnerWrapper: {
         position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
         justifyContent: 'center', alignItems: 'center',
         backgroundColor: 'rgba(255,255,255,0.5)', zIndex: 999,
     },
-    addButton: {
-        width: 60,
-        height: 60,
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderWidth: 1,
-        borderColor: '#6495ED',
-        borderRadius: 4,
-        marginRight: 10,
-        marginBottom: 10
-    },
-    addButtonText: {
-        fontSize: 30,
-        fontWeight: '300'
-    },
-    labelTag: {
-        position: 'absolute',
-        bottom: 12,
-        left: 1,
-        backgroundColor: '#6495ED',
-        paddingHorizontal: 9,
-        paddingVertical: 2,
-        borderRadius: 4,
-        zIndex: 1,
-    },
-    labelText: {
-        color: 'white',
-        fontSize: 10,
-        fontWeight: 'bold',
-    },
-    optionRow: { flexDirection: 'row', flexWrap: 'wrap', marginVertical: 8 },
-    optionBtn: { paddingVertical: 6, paddingHorizontal: 12, borderWidth: 1, borderColor: '#ccc', borderRadius: 4, marginRight: 8, marginBottom: 8 },
-    optionBtnActive: { backgroundColor: '#6495ED', borderColor: '#6495ED' },
-    optionText: { fontSize: 12, color: '#000' },
-    optionTextActive: { fontSize: 12, color: '#fff' },
-    chosenDate: { fontSize: 14, color: '#333', marginBottom: 12 },
-
 });
-
-export default ItemEditPage;

@@ -22,6 +22,7 @@ import useRemainingTime from '../../hooks/useRemainingTime';
 
 // SVG 아이콘
 import UserNoImgIcon from '../../assets/images/user/noImgUser.svg';
+import LeftAngleIcon from '../../assets/images/common/left-angle.svg';
 
 dayjs.extend(relativeTime);
 dayjs.locale('ko');
@@ -43,6 +44,7 @@ const ItemDetailPage = () => {
     const [isModalVisible, setIsModalVisible] = useState(false);    // 오른쪽 상단 ... 모달
     const [isBidModalVisible, setIsBidModalVisible] = useState(false);  // 입찰 모달
     const [isSuccessfulBidModalVisible, setIsSuccessfullBidModalVisible] = useState(false);  // 낙찰 모달
+    const [likeCount, setLikeCount] = useState(0);
     const [bidPrice, setBidPrice] = useState(0);
 
     // 로딩 스니퍼
@@ -144,6 +146,7 @@ const ItemDetailPage = () => {
                 if(res.data.item.favorites.length > 0) {
                     // 0보다크면 userId, itemId로 조회했기 때문에 찜한거임
                     setIsFavorite(true);
+                    setLikeCount(res.data.item._count.favorites);
                 }
             }
         } catch (err) {
@@ -171,7 +174,7 @@ const ItemDetailPage = () => {
                 return;
             }
             setLoading(true);
-            await axios.post(`${apiUrl}/api/item/favorite`, 
+            const res = await axios.post(`${apiUrl}/api/item/favorite`, 
                 { itemId },  // body
                 {
                     headers: {
@@ -180,7 +183,14 @@ const ItemDetailPage = () => {
                     }
                 }
             );
-            setIsFavorite(prev => !prev); // UI만 토글
+            if(res.data.result === "success") {
+                setIsFavorite(prev => !prev); // UI만 토글
+                if(res.data.flag === "Save") {
+                    setLikeCount(likeCount + 1);
+                }else {
+                    setLikeCount(likeCount - 1);
+                }
+            }
         }catch (err) {
             Toast.show({
                 ...toastOptions,
@@ -648,10 +658,10 @@ const ItemDetailPage = () => {
             <View style={styles.container}>
                 <View style={[styles.header, scrollY > 250 && styles.headerScrolled]}>
                     <TouchableOpacity onPress={() => navigation.goBack()}>
-                        <Icon name="angle-left" size={28} color={scrollY > 250 ? '#333' : '#fff'} />
+                        <LeftAngleIcon width={28} height={28} fill={scrollY > 250 ? '#333' : '#fff'} />
                     </TouchableOpacity>
                     <TouchableOpacity onPress={openModal} style={{ marginLeft: 'auto' }}>
-                        <MaterialIcon name="more-vert" size={24} color={scrollY > 100 ? '#333' : '#fff'} />
+                        <MaterialIcon name="more-vert" size={24} color={scrollY > 250 ? '#333' : '#fff'} />
                     </TouchableOpacity>
                 </View>
                 <View style={{ flex: 1 }}>
@@ -740,7 +750,8 @@ const ItemDetailPage = () => {
                                 </View>
                             </View>
                             <View style={styles.viewLikeBox}>
-                                <Text style={styles.viewLikeText}>조회 {item?.viewCount ?? 0} · 찜 {item?._count?.favorites ?? 0}</Text>
+                                {/* <Text style={styles.viewLikeText}>조회 {item?.viewCount ?? 0} · 찜 {item?._count?.favorites ?? 0}</Text> */}
+                                <Text style={styles.viewLikeText}>조회 {item?.viewCount ?? 0} · 찜 {likeCount}</Text>
                             </View>
                         </View>
 
@@ -1071,7 +1082,7 @@ const styles = StyleSheet.create({
     gavel: {
         width: 160,
         height: 160,
-        opacity: 0.6,
+        opacity: 0.8,
     },
     overlayText: {
         fontSize: 36,

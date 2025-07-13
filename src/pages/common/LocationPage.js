@@ -195,15 +195,15 @@ const LocationPage = ({ navigation }) => {
                 />
 
                 <View style={styles.searchContainer}>
-                <TextInput
-                    placeholder="동 이름을 검색하세요. (ex. 반포동)"
-                    placeholderTextColor="#aaa"
-                    style={styles.searchInput}
-                    value={searchText}
-                    onChangeText={setSearchText}
-                    returnKeyType="search"
-                    onSubmitEditing={handleSearchSubmit}
-                />
+                    <TextInput
+                        placeholder="동 이름을 검색하세요. (ex. 반포동)"
+                        placeholderTextColor="#aaa"
+                        style={styles.searchInput}
+                        value={searchText}
+                        onChangeText={setSearchText}
+                        returnKeyType="search"
+                        onSubmitEditing={handleSearchSubmit}
+                    />
                 </View>
 
                 <TouchableOpacity

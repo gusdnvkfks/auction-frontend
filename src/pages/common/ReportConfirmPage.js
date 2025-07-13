@@ -15,6 +15,8 @@ import Icon from 'react-native-vector-icons/FontAwesome'
 import Config from 'react-native-config';
 import axios from 'axios';
 import { AuthContext } from '../../contexts/AuthContext';
+import AngleHeader from '../../components/AngleHeader';
+import LeftAngle from '../../assets/images/common/left-angle.svg';
 
 const ReportConfirmPage = () => {
     const navigation = useNavigation();
@@ -88,33 +90,37 @@ const ReportConfirmPage = () => {
                 style={styles.container}
                 behavior={Platform.OS === 'ios' ? 'padding' : undefined}
             >
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                    <Icon name="angle-left" size={28} color={'#333'} />
-                </TouchableOpacity>
-
-                <Text style={styles.title}>이유: {reason}</Text>
-
-                <Text style={styles.label}>상세 내용 (선택)</Text>
-                <TextInput
-                    style={styles.textInput}
-                    placeholder="자세한 사유를 입력해주세요."
-                    value={content}
-                    onChangeText={setContent}
-                    multiline
+                <AngleHeader
+                    title="게시글 신고 설명"
+                    IconComponent={LeftAngle}
+                    onPress={() => navigation.goBack()}
                 />
 
-                <TouchableOpacity onPress={() => setHideUserPosts(prev => !prev)} style={styles.checkboxRow}>
-                    <Icon
-                        name={hideUserPosts ? 'check-square-o' : 'square-o'}
-                        size={22}
-                        color={hideUserPosts ? '#6495ED' : '#aaa'}
-                    />
-                    <Text style={styles.checkboxLabel}>이 사용자의 게시글 보지 않기</Text>
-                </TouchableOpacity>
+                <View style={styles.descriptionContainer}>
+                    <Text style={styles.title}>이유: {reason}</Text>
 
-                <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-                    <Text style={styles.submitText}>신고 제출</Text>
-                </TouchableOpacity>
+                    <Text style={styles.label}>상세 내용 (선택)</Text>
+                    <TextInput
+                        style={styles.textInput}
+                        placeholder="자세한 사유를 입력해주세요."
+                        value={content}
+                        onChangeText={setContent}
+                        multiline
+                    />
+
+                    <TouchableOpacity onPress={() => setHideUserPosts(prev => !prev)} style={styles.checkboxRow}>
+                        <Icon
+                            name={hideUserPosts ? 'check-square-o' : 'square-o'}
+                            size={22}
+                            color={hideUserPosts ? '#6495ED' : '#aaa'}
+                        />
+                        <Text style={styles.checkboxLabel}>이 사용자의 게시글 보지 않기</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
+                        <Text style={styles.submitText}>신고 제출</Text>
+                    </TouchableOpacity>
+                </View>
             </KeyboardAvoidingView>
         </SafeTopWrapper>
     );
@@ -123,8 +129,11 @@ const ReportConfirmPage = () => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        padding: 20,
         backgroundColor: '#fff',
+    },
+    descriptionContainer: {
+        paddingHorizontal: 16,
+        paddingVertical: 16,
     },
     backButton: {
         marginBottom: 20,

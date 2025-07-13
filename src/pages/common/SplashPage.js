@@ -59,6 +59,9 @@ const SplashPage = ({ navigation, route }) => {
             const token = await AsyncStorage.getItem('accessToken');
             const refreshToken = await AsyncStorage.getItem('refreshToken');
 
+            console.log("token : " + token);
+            console.log("refreshToken : " + refreshToken);
+
             if (!token) {
                 if (!refreshToken) {
                     navigation.replace('Landing');
@@ -105,13 +108,21 @@ const SplashPage = ({ navigation, route }) => {
 
     const validateAccessToken = async (accessToken) => {
         try {
-            await axios.get(
-                `${apiUrl}/api/validateToken`,
-                {},
-                { headers: { Authorization: `Bearer ${accessToken}` } }
+            // console.log("validateAccessToken : ", accessToken);
+            const response = await axios.get(
+            `${apiUrl}/api/validate-token`,
+                {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`,
+                    },
+                }
             );
-            return true;
+
+            console.log("response : " + response.data);
+
+            return response.data.result === "success";
         } catch {
+            // console.error("validateAccessToken error:", err);
             return false;
         }
     };

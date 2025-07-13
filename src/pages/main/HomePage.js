@@ -1,10 +1,8 @@
 // src/pages/main/HomePage.js
 
 import React, { useContext, useState, useEffect, useCallback, useMemo } from 'react';
-import { Text, StyleSheet, View, Alert, FlatList, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
+import { Text, Modal, TouchableWithoutFeedback, Pressable, StyleSheet, View, FlatList, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
 import AuctionItem from '../../components/AuctionItem';
-import Icon from 'react-native-vector-icons/FontAwesome';
-import FIcon from 'react-native-vector-icons/Feather';
 import MIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 import FloatingButton from '../../components/FloatingButton';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
@@ -12,10 +10,30 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import axios from 'axios';
 import Config from 'react-native-config';
-import AppText from '../../components/AppText';
 import { AuthContext } from '../../contexts/AuthContext';
+import { ItemUploadContext } from '../../contexts/ItemUploadProvider';
+
+import Toast from 'react-native-toast-message';
 
 const HomePage = () => {
+    const toastOptions = {
+        position: 'bottom',
+        bottomOffset: 120,
+        visibilityTime: 2000,
+    };
+
+    const {
+        setTitle,
+        setDescription,
+        setStartPrice,
+        setImages,
+        setMainCategoryId,
+        setSubCategoryId,
+        setSelectedCategory,
+        setAuctionOption,
+        resetForm
+    } = useContext(ItemUploadContext);
+
     const apiUrl = Config.API_URL;
     const route = useRoute();
     const navigation = useNavigation();
@@ -28,6 +46,10 @@ const HomePage = () => {
     const [loading, setLoading] = useState(false);
     const [hasMore, setHasMore] = useState(true);
     const [cursor, setCursor] = useState(null);
+
+    // **드래프트 모달 상태추가**
+    const [draftModalVisible, setDraftModalVisible] = useState(false);
+    const [draftItem, setDraftItem] = useState(null);
 
     useFocusEffect(
         useCallback(() => {
@@ -124,14 +146,82 @@ const HomePage = () => {
         );
     }
 
-    const goItemUpload = () => {
+    const goItemUpload = async () => {
         if(token) {
-            navigation.navigate('ItemUpload')
+            // 임시저장 중인게 있는지 확인하기
+            try {
+                const res = await axios.get(`${apiUrl}/api/item/temp`,
+                    {
+                        params: { 
+                        },
+                        headers: {
+                            Authorization: `Bearer ${token}`,
+                            'Content-Type': 'application/json',
+                        }
+                    }
+                );
+    
+                if(res.data.result === "success") {
+                    if(res.data.item) {
+                        // 임시저장된 경매물품 데이터가 있으면
+                        // 뭐 쓸지 정해야됨
+                        // 모달창 띄워주기
+                        setDraftItem(res.data.item);
+                        setDraftModalVisible(true);
+                    }else {
+                        // 없으면 그냥 업로드
+                        navigation.navigate('ItemUpload')
+                    }
+                }
+            } catch (error) {
+                console.log(error.response);
+                if(error.response.data.error === "REFRESH_EXPIRED") {
+                    await AsyncStorage.multiRemove(['accessToken','refreshToken']);
+                    navigation.reset({ index:0, routes:[{name:'Landing'}] });
+                }
+            }
         }else {
-            Alert.alert("로그인이 필요합니다.");
+            Toast.show({ ...toastOptions, type: 'error', text1: '로그인이 필요합니다.' });
             navigation.navigate('Login');
         }
     }
+
+    // 모달에서 “이어쓰기”
+    const handleContinueDraft = () => {
+        setDraftModalVisible(false);
+        // draftItem 을 context 등에 세팅한 뒤
+        console.log(draftItem);
+
+        setTitle(draftItem.title);
+        setDescription(draftItem.description);
+        setStartPrice(draftItem.startPrice.toString());
+        setImages(draftItem.images.map(img => ({
+            uri: img.url,
+            fileName: img.url.split('/').pop(),
+            type: 'image/jpeg',
+        })));
+        setMainCategoryId(draftItem.mainCategoryId);
+        setSubCategoryId(draftItem.subCategoryId);
+        setSelectedCategory(`${draftItem.mainCategoryName} > ${draftItem.subCategoryName}`);
+        setAuctionOption({
+            productState: draftItem.productState,
+            endOption: draftItem.endOption,
+            bidUnit: draftItem.bidUnit?.toString() || '',
+            buyNowPrice: draftItem.buyNowPrice?.toString() || '',
+            endDate: draftItem.endTime,
+        });
+
+        navigation.navigate("ItemEdit", {
+            itemId: draftItem.id,
+        });
+    };
+
+    // 모달에서 “새로작성”
+    const handleNewDraft = () => {
+        setDraftModalVisible(false);
+        // 서버에 남은 임시저장 지우고(선택사항), 
+        navigation.navigate('ItemUpload');
+    };
 
     const handleClear = () => {
         setItems([]);
@@ -177,7 +267,7 @@ const HomePage = () => {
                             style={styles.logo}
                             resizeMode="contain"
                         />
-                        <AppText style={styles.emptyText}>조건에 맞는 경매 물품이 없습니다.</AppText>
+                        <Text style={styles.emptyText}>조건에 맞는 경매 물품이 없습니다.</Text>
                     </View>
                 }
             />
@@ -190,6 +280,45 @@ const HomePage = () => {
                     <ActivityIndicator size="large" color="#6495ED" />
                 </View>
             )}
+
+            <Modal
+                visible={draftModalVisible}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setDraftModalVisible(false)}
+            >
+                {/* 바깥 눌렀을 때 닫기 */}
+                <TouchableWithoutFeedback onPress={() => setDraftModalVisible(false)}>
+                    <View style={modalStyles.backdrop}>
+                        {/* 내부 영역 터치 막기 */}
+                        <TouchableWithoutFeedback>
+                        <View style={modalStyles.modalBox}>
+                            <Text style={modalStyles.title}>
+                                작성중이던 경매 물품이 있습니다.
+                            </Text>
+                            <Text style={modalStyles.message}>
+                                이어 작성하시겠습니까? {'\n'}새로 작성 시 작성중이던 글은 삭제됩니다.
+                            </Text>
+            
+                            <View style={modalStyles.buttonRow}>
+                                <Pressable
+                                    style={modalStyles.button}
+                                    onPress={handleContinueDraft}
+                                >
+                                    <Text style={modalStyles.buttonText}>이어쓰기</Text>
+                                </Pressable>
+                                <Pressable
+                                    style={modalStyles.button}
+                                    onPress={handleNewDraft}
+                                >
+                                    <Text style={modalStyles.buttonText}>새로작성</Text>
+                                </Pressable>
+                            </View>
+                        </View>
+                        </TouchableWithoutFeedback>
+                    </View>
+                </TouchableWithoutFeedback>
+            </Modal>
         </View>
     );
 };
@@ -336,6 +465,34 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         backgroundColor: 'rgba(255,255,255,0.5)',
         zIndex: 999,
+    },
+});
+
+const modalStyles = StyleSheet.create({
+    backdrop: {
+        flex:1, backgroundColor:'rgba(0,0,0,0.4)',
+        justifyContent:'center', alignItems:'center'
+    },
+    modalBox: {
+        width:'80%', backgroundColor:'#fff', borderRadius:8,
+        padding:20, alignItems:'center'
+    },
+    title: {
+        fontSize:14, fontWeight:'bold', marginBottom:8
+    },
+    message: {
+        fontSize:12, color:'#555', marginBottom:20, textAlign:'center'
+    },
+    buttonRow: {
+        flexDirection:'row', justifyContent:'space-between', width:'100%'
+    },
+    button: {
+        flex:1, paddingVertical:10, marginHorizontal:5,
+        backgroundColor:'#6495ED', borderRadius:4,
+        alignItems:'center'
+    },
+    buttonText: {
+        color:'#fff', fontSize:14, fontWeight:'600'
     },
 });
 

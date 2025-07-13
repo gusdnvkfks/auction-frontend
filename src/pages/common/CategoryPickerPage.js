@@ -27,6 +27,7 @@ const CategoryPickerPage = ({ navigation, route }) => {
 
     // 카테고리 목록 가져오기
     useEffect(() => {
+        console.log(subCategoryId);
         getCategoryList();
     }, []);
 

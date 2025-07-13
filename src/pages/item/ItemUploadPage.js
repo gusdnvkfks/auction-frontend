@@ -17,7 +17,6 @@ import mime from 'react-native-mime-types';
 import axios from 'axios';
 import Config from 'react-native-config';
 import * as ImagePicker from 'react-native-image-picker';
-import AppText from '../../components/AppText';
 import AddButton from '../../components/AddButton';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import RNFS from 'react-native-fs';
@@ -26,6 +25,9 @@ import { AuthContext } from '../../contexts/AuthContext';
 import { ItemUploadContext } from '../../contexts/ItemUploadProvider';
 import ImageResizer from 'react-native-image-resizer';
 import SafeTopWrapper from '../../components/SafeTopWrapper';
+
+import AngleHeader from '../../components/AngleHeader';
+import CloseIcon from '../../assets/images/common/close.svg';
 
 const STATUS_BAR_HEIGHT = Platform.OS === 'android'
     ? StatusBar.currentHeight
@@ -359,6 +361,7 @@ const ItemUploadPage = ({ navigation }) => {
             resetForm();
             navigation.goBack();
         } catch(error) {
+            console.log(error);
             Toast.show({
                 ...toastOptions,
                 type: 'error',
@@ -376,12 +379,11 @@ const ItemUploadPage = ({ navigation }) => {
                 keyboardVerticalOffset={Platform.OS === 'ios' ? 120 : 0}
                 style={{ flex: 1 }}
             >
-                <View style={styles.header}>
-                    <TouchableOpacity onPress={handleTemporarySave} style={styles.closeButton}>
-                        <Ionicons name="close" size={24} color="#000" />
-                    </TouchableOpacity>
-                    <AppText style={styles.headerTitle}>내 물건 경매</AppText>
-                </View>
+                <AngleHeader
+                    title="내 물건 경매"
+                    IconComponent={() => <CloseIcon width={16} height={16} />}
+                    onPress={handleTemporarySave}
+                />
 
 
                 <ScrollView style={styles.scrollArea} contentContainerStyle={styles.contentContainer}>
@@ -401,7 +403,7 @@ const ItemUploadPage = ({ navigation }) => {
                         {/* 사진 추가 버튼 */}
                         {images.length < 10 && (
                             <TouchableOpacity style={styles.addButton} onPress={pickImage}>
-                                {/* <AppText style={styles.addButtonText}>+</AppText> */}
+                                {/* <Text style={styles.addButtonText}>+</Text> */}
                                 <Ionicons name="camera-outline" size={28} color="#6495ED" />
                                 <Text style={styles.imageCountText}>{images.length}/10</Text>
                             </TouchableOpacity>
@@ -519,41 +521,12 @@ const ItemUploadPage = ({ navigation }) => {
 }
 
 const styles = StyleSheet.create({
-    header: {
-        position: 'absolute',
-        left: 0,
-        right: 0,
-        height: HEADER_HEIGHT,
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 16,
-        backgroundColor: '#fff',
-        zIndex: 10,
-        elevation: 0,
-        borderBottomWidth: 0,   // ✅ 줄 제거
-    },
-    headerTitle: {
-        position: 'absolute',
-        left: 0,
-        right: 0,
-        textAlign: 'center',
-        fontSize: 18,
-        fontWeight: '600',
-    },
-    closeButton: {
-        position: 'absolute',
-        left: 16,
-        top: 0,
-        bottom: 0,
-        justifyContent: 'center',
-    },
     scrollArea: {
         flex: 1,
         backgroundColor: '#fff',
     },
     contentContainer: {
         padding: 16,
-        paddingBottom: FOOTER_HEIGHT + HOME_INDICATOR_HEIGHT + 40,
     },
     // 경고 문구
     topNoticeBox: {
@@ -564,7 +537,6 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderRadius: 8,
         padding: 10,
-        marginTop: STATUS_BAR_HEIGHT,
     },
     topNoticeText: {
         fontSize: 12,
@@ -638,7 +610,7 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         bottom: 2
     },
-    // 인풋창창
+    // 인풋창
     inputRowLarge: {
         flexDirection: 'row',
         alignItems: 'flex-start',
@@ -665,7 +637,7 @@ const styles = StyleSheet.create({
         flex: 1,
         fontSize: 12,
         color: '#000',
-        paddingVertical: 10,
+        paddingVertical: 5,
     },
     // 설명 영역
     descriptionWrapper: {
@@ -750,7 +722,7 @@ const styles = StyleSheet.create({
     },
     footerButton: {
         width: '100%',
-        marginBottom: 20,
+        // marginBottom: 20,
     },
     spinnerWrapper: {
         position: 'absolute',

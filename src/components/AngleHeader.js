@@ -8,7 +8,7 @@ const AngleHeader = ({ title = '', IconComponent, onPress }) => {
         <View style={styles.header}>
             {/* 왼쪽 아이콘 */}
             <TouchableOpacity onPress={onPress} style={styles.leftIcon}>
-                {IconComponent ? <IconComponent width={20} height={20} /> : null}
+                {IconComponent ? <IconComponent width={20} height={20} fill={'#333'} /> : null}
             </TouchableOpacity>
 
             {/* 중앙 타이틀 */}
