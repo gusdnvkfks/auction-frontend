@@ -37,6 +37,7 @@ import EditProfilePage from './src/pages/mypage/EditProfilePage';
 import SettingPage from './src/pages/mypage/SettingPage';
 import BlockedUsersPage from './src/pages/mypage/BlockedUserPage';
 import PrivacyPolicyPage from './src/pages/terms/PrivacyPolicyPage';
+import PostListPage from './src/pages/post/PostListPage';
 
 // 토스트 설정
 const toastConfig = {
@@ -82,9 +83,9 @@ export default function App() {
                                     <Stack.Screen name="Login" component={LoginPage} />
                                     {/* <Stack.Screen name="Location" component={LocationPage} /> */}
                                     <Stack.Screen
-                                      name="Location"
-                                      component={LocationPage}
-                                      options={{ animation: 'none' }}
+                                        name="Location"
+                                        component={LocationPage}
+                                        options={{ animation: 'none' }}
                                     />
                                     <Stack.Screen name="Report" component={ReportReasonPage} options={{ headerShown: false }} />
                                     <Stack.Screen name="ReportConfirm" component={ReportConfirmPage} options={{ headerShown: false }} />
@@ -106,6 +107,7 @@ export default function App() {
                                     <Stack.Screen name="Setting" component={SettingPage} options={{ headerShown: false }} />
                                     <Stack.Screen name="BlockedUsers" component={BlockedUsersPage} options={{ headerShown: false }} />
                                     <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyPage} options={{ headerShown: false }} />
+                                    <Stack.Screen name="PostList" component={PostListPage} options={{ headerShown: false }} />
                                 </Stack.Navigator>
                             </ItemUploadProvider>
                         </NavigationContainer>
