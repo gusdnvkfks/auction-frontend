@@ -267,7 +267,7 @@ const HomePage = () => {
                             style={styles.logo}
                             resizeMode="contain"
                         />
-                        <Text style={styles.emptyText}>조건에 맞는 경매 물품이 없습니다.</Text>
+                        <Text style={styles.emptyText}>진행중인 경매 물품이 없습니다.</Text>
                     </View>
                 }
             />

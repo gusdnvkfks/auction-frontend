@@ -9,16 +9,18 @@ import {
     ActivityIndicator,
     Dimensions,
     Modal,
-    ScrollView
+    ScrollView,
+    Image
 } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import FeatherIcon from 'react-native-vector-icons/Feather';
 import axios from 'axios';
 import Config from 'react-native-config';
-import AppText from '../../components/AppText';
 import SafeTopWrapper from '../../components/SafeTopWrapper';
 import AuctionItem from '../../components/AuctionItem';
 import { AuthContext } from '../../contexts/AuthContext';
+
+import LeftAngleIcon from '../../assets/images/common/left-angle.svg';
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -126,8 +128,10 @@ const CategoryItemPage = ({ navigation, route }) => {
     return (
         <SafeTopWrapper style={{ flex: 1 }}>
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()}><Icon name="angle-left" size={24} /></TouchableOpacity>
-                <Text>
+                <TouchableOpacity onPress={() => navigation.goBack()}>
+                    <LeftAngleIcon width={24} height={24} fill={'#333'} />
+                </TouchableOpacity>
+                <Text style={{ color: "#333" }}>
                     {mainCategoryName}
                     {selectedSubCategoryName && selectedSubCategoryName !== '전체보기' && ` > ${selectedSubCategoryName}`}
                 </Text>
@@ -146,7 +150,7 @@ const CategoryItemPage = ({ navigation, route }) => {
                     }
                     setModalVisible(true);
                 }}>
-                    <FeatherIcon name="menu" size={24} />
+                    <FeatherIcon name="menu" size={24} color={"#333"} />
                 </TouchableOpacity>
             </View>
 
@@ -165,6 +169,16 @@ const CategoryItemPage = ({ navigation, route }) => {
                 onEndReached={handleLoadMore}
                 onEndReachedThreshold={0.2}
                 ListFooterComponent={loading && <ActivityIndicator size="large" color="#6495ED" style={{ marginVertical: 20 }} />}
+                ListEmptyComponent={
+                    <View style={styles.emptyContainer}>
+                        <Image
+                            source={require('../../assets/images/logo.png')} // 여기에 네 로고 경로
+                            style={styles.logo}
+                            resizeMode="contain"
+                        />
+                        <Text style={styles.emptyText}>진행중인 경매 물품이 없습니다.</Text>
+                    </View>
+                }
             />
 
             <Modal visible={modalVisible} animationType="slide" transparent>
@@ -261,6 +275,22 @@ const styles = StyleSheet.create({
         paddingVertical: 14,
         borderBottomWidth: 1,
         borderBottomColor: '#eee',
+    },
+    emptyContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingTop: 200,
+    },
+    logo: {
+        width: 140,
+        height: 140,
+        marginBottom: 16,
+        opacity: 0.7,
+    },
+    emptyText: {
+        color: '#888',
+        fontSize: 18,
     },
     spinnerWrapper: {
         position: 'absolute',

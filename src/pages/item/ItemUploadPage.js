@@ -320,56 +320,58 @@ const ItemUploadPage = ({ navigation }) => {
 
     // 임시 저장
     const handleTemporarySave = async () => {
-        setLoading(true);
-        try {
-            const formData = new FormData();
+        // setLoading(true);
+        // try {
+        //     const formData = new FormData();
 
-            formData.append('title', title);
-            formData.append('description', description);
-            formData.append('productState', auctionOption?.productState);
-            formData.append('endOption', auctionOption?.endOption);
-            formData.append('endTime', auctionOption?.endDate);
-            formData.append('startPrice', Number(startPrice.replace(/,/g, '')));
-            formData.append('bidUnit', Number(auctionOption?.bidUnit ?? 0));
-            formData.append('buyNowPrice', Number(auctionOption?.buyNowPrice ?? 0));
-            formData.append('isBidUnit', auctionOption?.bidUnit ? 1 : 0);
-            formData.append('categoryId', subCategoryId);
-            formData.append('status', 2); // ✅ 이게 핵심
+        //     formData.append('title', title);
+        //     formData.append('description', description);
+        //     formData.append('productState', auctionOption?.productState);
+        //     formData.append('endOption', auctionOption?.endOption);
+        //     formData.append('endTime', auctionOption?.endDate);
+        //     formData.append('startPrice', Number(startPrice.replace(/,/g, '')));
+        //     formData.append('bidUnit', Number(auctionOption?.bidUnit ?? 0));
+        //     formData.append('buyNowPrice', Number(auctionOption?.buyNowPrice ?? 0));
+        //     formData.append('isBidUnit', auctionOption?.bidUnit ? 1 : 0);
+        //     formData.append('categoryId', subCategoryId);
+        //     formData.append('status', 2); // ✅ 이게 핵심
 
-            // ✅ 이미지들도 추가 (기존과 동일하게)
-            images.forEach((img, i) => {
-                formData.append('images', {
-                    uri: Platform.OS === 'ios' ? img.uri.replace('file://', '') : img.uri,
-                    name: img.fileName || `image_${i}.jpg`,
-                    type: img.type || mime.lookup(img.uri) || 'image/jpeg',
-                });
-                formData.append('isThumbnail', i === 0 ? '1' : '0');
-            });
+        //     // ✅ 이미지들도 추가 (기존과 동일하게)
+        //     images.forEach((img, i) => {
+        //         formData.append('images', {
+        //             uri: Platform.OS === 'ios' ? img.uri.replace('file://', '') : img.uri,
+        //             name: img.fileName || `image_${i}.jpg`,
+        //             type: img.type || mime.lookup(img.uri) || 'image/jpeg',
+        //         });
+        //         formData.append('isThumbnail', i === 0 ? '1' : '0');
+        //     });
 
-            await axios.post(`${apiUrl}/api/item/create`, formData, {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'multipart/form-data',
-                },
-            });
+        //     await axios.post(`${apiUrl}/api/item/create`, formData, {
+        //         headers: {
+        //             'Authorization': `Bearer ${token}`,
+        //             'Content-Type': 'multipart/form-data',
+        //         },
+        //     });
 
-            Toast.show({
-                ...toastOptions,
-                type: 'success',
-                text1: '임시저장 완료'
-            });
-            resetForm();
-            navigation.goBack();
-        } catch(error) {
-            console.log(error);
-            Toast.show({
-                ...toastOptions,
-                type: 'error',
-                text1: '임시저장 실패'
-            });
-        } finally {
-            setLoading(false);
-        }
+        //     Toast.show({
+        //         ...toastOptions,
+        //         type: 'success',
+        //         text1: '임시저장 완료'
+        //     });
+        //     resetForm();
+        //     navigation.goBack();
+        // } catch(error) {
+        //     console.log(error);
+        //     Toast.show({
+        //         ...toastOptions,
+        //         type: 'error',
+        //         text1: '임시저장 실패'
+        //     });
+        // } finally {
+        //     setLoading(false);
+        // }
+
+        navigation.goBack();
     }
 
     return (
